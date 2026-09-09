@@ -1,0 +1,25 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.spec
+*.exe
+
+# Temp files and render cache
+temp_render/
+*.mp4
+*.mp3
+*.wav
+
+# Virtual Environment
+venv/
+.env/
+env/
+
+# IDE
+.vscode/
+.idea/
