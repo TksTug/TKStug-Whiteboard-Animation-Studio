@@ -1,5 +1,7 @@
 import os
 import sys
+import uuid
+import shutil
 import threading
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
