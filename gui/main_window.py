@@ -578,21 +578,43 @@ class MainWindow(QMainWindow):
 
     def populate_voices(self):
         self.cb_voice.clear()
-        for v in self.tts_engine.voices_data:
-            display = f"{v.get('name', 'Voice')} ({v.get('gender', 'N/A')})"
-            self.cb_voice.addItem(display, v.get("id"))
-        self.cb_voice.setCurrentIndex(0)
+        target_idx = 0
+        for idx, v in enumerate(self.tts_engine.voices_data):
+            v_id = v.get("id", "")
+            v_name = v.get("name", "Voice")
+            if v_id == "tao-thao" or "Tào Tháo" in v_name:
+                display = f"👑 {v_name} (Uy Nghiêm - Lịch Sử Hào Hùng)"
+                target_idx = idx
+            else:
+                display = f"{v_name} ({v.get('gender', 'N/A')})"
+            self.cb_voice.addItem(display, v_id)
+        self.cb_voice.setCurrentIndex(target_idx)
 
     def load_sample_story(self):
         sample = (
-            "Hơn bốn ngàn năm lịch sử dựng nước và giữ nước, non sông gấm vóc Việt Nam ngời sáng tinh thần quật cường và ý chí độc lập ngàn đời.\n\n"
-            "Từ thuở sơ khai của các vua Hùng dựng nước Văn Lang, tiếng Trống Đồng Đông Sơn trầm hùng vang vọng khắp núi sông, hun đúc nên cội nguồn linh thiêng của con Rồng cháu Tiên.\n\n"
-            "Tiếp nối truyền thống kiên cường, mùa xuân năm bốn mươi, Hai Bà Trưng cưỡi voi phất cờ khởi nghĩa tại Mê Linh, mở ra trang sử oanh liệt của người phụ nữ Việt Nam.\n\n"
-            "Đến thế kỷ thứ mười, trên dòng sông Bạch Đằng cuồn cuộn sóng trào, trận địa cọc gỗ ngầm của Ngô Quyền đã chôn vùi quân thù, chấm dứt hơn một ngàn năm Bắc thuộc.\n\n"
-            "Mùa thu năm một ngàn không trăm mười, vua Lý Thái Tổ ban Chiếu dời đô về Thăng Long rồng bay, đặt nền móng ngàn năm văn hiến cho kinh đô rực rỡ.\n\n"
-            "Và mùa xuân Kỷ Dậu năm một ngàn bảy trăm tám mươi chín, Hoàng đế Quang Trung mặc áo vải cờ đào thần tốc hành quân, đại phá hai mươi chín vạn quân Thanh làm nên chiến thắng Đống Đa vang dội.\n\n"
-            "Trải qua những năm tháng kháng chiến trường kỳ, chiến thắng Điện Biên Phủ lừng lẫy năm châu chấn động địa cầu đã khẳng định bản lĩnh bất khuất của dân tộc Việt Nam.\n\n"
-            "Ngày nay, non sông Việt Nam liền một dải gấm vóc, từ địa đầu Móng Cái đến mũi Cà Mau, cùng triệu trái tim vững bước vươn mình vào kỷ nguyên thịnh vượng."
+            "Hơn bốn ngàn năm lịch sử dựng nước và giữ nước, mảnh đất hình chữ S đã tôi luyện nên ý chí quật cường và tinh thần bất khuất của dân tộc Việt Nam.
+
+Từ thuở sơ khai của các vua Hùng dựng nước Văn Lang, tiếng Trống Đồng Đông Sơn trầm hùng vang vọng khắp núi sông, hun đúc nên nguồn cội thiêng liêng của dòng giống Tiên Rồng.
+
+Mùa xuân năm bốn mươi, nợ nước thù nhà sục sôi, Hai Bà Trưng cưỡi voi phất cờ khởi nghĩa tại Mê Linh, tiếng hô xung trận chấn động bờ cõi, mở ra trang sử vẻ vang của người phụ nữ Việt Nam.
+
+Đến năm chín trăm ba mươi tám, trên dòng sông Bạch Đằng cuộn sóng gầm vang, trận địa cọc gỗ ngầm của Ngô Quyền đã nhấn chìm chiến thuyền quân thù, chấm dứt hơn một ngàn năm Bắc thuộc.
+
+Mùa thu năm một ngàn không trăm mười, vua Lý Thái Tổ nhìn thấy rồng vàng bay lên, quyết định ban Chiếu dời đô về Thăng Long, đặt nền móng ngàn năm văn hiến cho kinh đô nước Việt.
+
+Vào thế kỷ thứ mười ba, trước vó ngựa hung tàn của đế chế Mông Nguyên, quân dân nhà Trần với hào khí Đông A rực lửa và lời thề Sát Thát đã ba lần quét sạch giặc ngoại xâm.
+
+Nơi núi rừng Lam Sơn hiểm trở, Lê Lợi cùng Nguyễn Trãi nếm mật nằm gai mười năm trường kỳ, dùng thanh gươm Thuận Thiên dẹp tan quân Minh, lập lại nền thái bình muôn thuở.
+
+Mùa xuân Kỷ Dậu năm một ngàn bảy trăm tám mươi chín, Hoàng đế Quang Trung mặc áo vải cờ đào thần tốc hành quân, đại phá hai mươi chín vạn quân Thanh tại Ngọc Hồi Đống Đa vang dội.
+
+Bên dòng sông Hương thơ mộng, Cố Đô Huế sừng sững uy nghiêm với Ngọ Môn và cung điện cổ kính, lưu giữ tinh hoa kiến trúc cùng bản sắc văn hóa hoàng triều ngàn đời.
+
+Tháng năm năm một ngàn chín trăm năm mươi tư, chiến dịch Điện Biên Phủ toàn thắng lừng lẫy năm châu chấn động địa cầu, khẳng định sức mạnh đại đoàn kết toàn dân.
+
+Từ đỉnh đầu Lũng Cú Móng Cái đến mũi Cà Mau, cùng hai quần đảo Hoàng Sa và Trường Sa thiêng liêng, non sông Việt Nam liền một dải, chủ quyền lãnh thổ đời đời bất khả xâm phạm.
+
+Kế thừa truyền thống kiên cường của cha ông, thế hệ hôm nay vững vàng bước vào kỷ nguyên mới, viết tiếp những trang sử vẻ vang đưa non sông Việt Nam vươn tầm thế giới."
         )
         self.script_input.setPlainText(sample)
         self.on_auto_segment()
