@@ -20,12 +20,14 @@ from backend.scene_manager import SceneManager, StoryScene, ARTWORK_MAPPING
 from backend.drawing_templates import TEMPLATES
 from backend.artistic_sketch_engine import ArtisticSketchEngine
 from backend.video_renderer import VideoRenderer
+from backend.ai_art_generator import AIArtGenerator
 from backend.utils import get_asset_path
 
 class WorkerSignals(QObject):
     progress = pyqtSignal(int, str)
     finished = pyqtSignal(bool, str)
     preview_ready = pyqtSignal(int, str, float)
+    art_generated = pyqtSignal(int, str)
 
 class WhiteboardCanvasWidget(QWidget):
     """Live interactive preview player showing multi-layer pencil sketch + watercolor inking in real-time"""
@@ -161,11 +163,13 @@ class MainWindow(QMainWindow):
         self.tts_engine = WhiteboardTTSEngine()
         self.scene_manager = SceneManager()
         self.video_renderer = VideoRenderer(self.tts_engine)
+        self.ai_art_generator = AIArtGenerator()
         self.current_scenes = []
         self.is_playing_all = False
 
         self.signals = WorkerSignals()
         self.signals.preview_ready.connect(self._handle_preview_ready)
+        self.signals.art_generated.connect(self._handle_art_generated)
 
         self.setup_ui()
         self.apply_theme()
@@ -242,6 +246,14 @@ class MainWindow(QMainWindow):
             }
             QPushButton#primaryBtn:hover {
                 background-color: #0369a1;
+            }
+            QPushButton#aiBtn {
+                background-color: #9333ea;
+                color: #ffffff;
+                border: 1px solid #c084fc;
+            }
+            QPushButton#aiBtn:hover {
+                background-color: #7e22ce;
             }
             QPushButton#playAllBtn {
                 background-color: #8b5cf6;
@@ -347,7 +359,7 @@ class MainWindow(QMainWindow):
         self.main_layout.setSpacing(10)
 
         header_layout = QHBoxLayout()
-        title_label = QLabel("✨ TKStug Whiteboard Animation Studio - Studio Hoạt Họa Lịch Sử 2D Nghệ Thuật")
+        title_label = QLabel("✨ TKStug Whiteboard Animation Studio - Studio Hoạt Họa Lịch Sử 2D Nghệ Thuật (AI Masterpiece)")
         title_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #38bdf8;")
         header_layout.addWidget(title_label)
         header_layout.addStretch()
@@ -368,7 +380,7 @@ class MainWindow(QMainWindow):
         script_layout.addWidget(self.script_input)
 
         btn_row = QHBoxLayout()
-        self.btn_auto_segment = QPushButton("🪄 Phân Tích & Tạo Phân Cảnh Tự Động", script_group)
+        self.btn_auto_segment = QPushButton("🪄 Phân Tích & Phân Cảnh", script_group)
         self.btn_auto_segment.setObjectName("primaryBtn")
         self.btn_auto_segment.clicked.connect(self.on_auto_segment)
         btn_row.addWidget(self.btn_auto_segment)
@@ -390,6 +402,14 @@ class MainWindow(QMainWindow):
         self.scene_list = QListWidget(storyboard_group)
         self.scene_list.currentRowChanged.connect(self.on_scene_selected)
         sb_layout.addWidget(self.scene_list)
+
+        sb_btn_row = QHBoxLayout()
+        self.btn_ai_gen_all = QPushButton("✨ AI Vẽ Tranh Toàn Bộ Cảnh", storyboard_group)
+        self.btn_ai_gen_all.setObjectName("aiBtn")
+        self.btn_ai_gen_all.clicked.connect(self.on_ai_gen_all_scenes)
+        sb_btn_row.addWidget(self.btn_ai_gen_all)
+        sb_layout.addLayout(sb_btn_row)
+
         left_layout.addWidget(storyboard_group)
 
         self.splitter.addWidget(left_panel)
@@ -427,7 +447,7 @@ class MainWindow(QMainWindow):
 
         # Controls Row
         prev_ctrl = QHBoxLayout()
-        self.btn_play_all = QPushButton("🎬 Phát Toàn Bộ Video (Tất Cả Cảnh)", preview_group)
+        self.btn_play_all = QPushButton("🎬 Phát Toàn Bộ Video", preview_group)
         self.btn_play_all.setObjectName("playAllBtn")
         self.btn_play_all.clicked.connect(self.on_play_all)
         prev_ctrl.addWidget(self.btn_play_all)
@@ -452,12 +472,17 @@ class MainWindow(QMainWindow):
         self.btn_pause_preview.clicked.connect(self.on_pause_clicked)
         prev_ctrl.addWidget(self.btn_pause_preview)
 
+        self.btn_ai_gen_single = QPushButton("✨ AI Vẽ Cảnh Này", preview_group)
+        self.btn_ai_gen_single.setObjectName("aiBtn")
+        self.btn_ai_gen_single.clicked.connect(self.on_ai_gen_single_scene)
+        prev_ctrl.addWidget(self.btn_ai_gen_single)
+
         prev_ctrl.addWidget(QLabel("Tranh:", preview_group))
         self.cb_artwork = QComboBox(preview_group)
         self.cb_artwork.currentIndexChanged.connect(self.on_artwork_changed)
         prev_ctrl.addWidget(self.cb_artwork)
 
-        self.btn_upload_img = QPushButton("📁 Tải Ảnh Riêng", preview_group)
+        self.btn_upload_img = QPushButton("📁 Tải Ảnh", preview_group)
         self.btn_upload_img.setObjectName("uploadBtn")
         self.btn_upload_img.clicked.connect(self.on_upload_custom_image)
         prev_ctrl.addWidget(self.btn_upload_img)
@@ -541,30 +566,11 @@ class MainWindow(QMainWindow):
             ("art_vn_hoang_thanh", "🇻🇳 [Lịch Sử] Hoàng Thành Thăng Long & Cột Cờ"),
             ("art_vn_co_do_hue", "🇻🇳 [Lịch Sử] Cố Đô Huế & Ngọ Môn Hoàng Thành"),
             ("art_vn_ban_do", "🇻🇳 [Lịch Sử] Bản Đồ Non Sông Việt Nam"),
-            ("art_growth_nature", "🌱 [Nghệ Thuật] Mầm Cây & Bình Minh"),
-            ("art_idea_wisdom", "💡 [Nghệ Thuật] Bóng Đèn Trí Tuệ & Ý Tưởng"),
-            ("art_mountain_peak", "🏔️ [Nghệ Thuật] Đỉnh Núi Vinh Quang"),
-            ("art_time_hourglass", "⏳ [Nghệ Thuật] Đồng Hồ Cát Thời Gian"),
-            ("art_book_knowledge", "📖 [Nghệ Thuật] Cuốn Sách & Tri Thức"),
-            ("art_lighthouse_storm", "🗼 [Nghệ Thuật] Hải Đăng Vượt Bão Tố"),
-            ("art_wealth_finance", "💰 [Nghệ Thuật] Tài Chính & Thịnh Vượng"),
-            ("art_target_focus", "🎯 [Nghệ Thuật] Hồng Tâm & Mục Tiêu"),
-            ("art_partnership_deal", "🤝 [Nghệ Thuật] Bắt Tay Hợp Tác"),
-            ("art_rocket_breakthrough", "🚀 [Nghệ Thuật] Tên Lửa Bứt Phá"),
-            ("art_trophy_glory", "🏆 [Nghệ Thuật] Chiếc Cúp Chiến Thắng"),
-            ("art_gear_system", "⚙️ [Nghệ Thuật] Bánh Răng Hệ Thống"),
-            ("art_shield_protection", "🛡️ [Nghệ Thuật] Khiên Chắn Bảo Vệ"),
-            ("art_key_unlock", "🔑 [Nghệ Thuật] Chìa Khóa Giải Pháp"),
-            ("art_growth_chart", "📈 [Nghệ Thuật] Biểu Đồ Tăng Trưởng"),
-            ("art_puzzle_solution", "🧩 [Nghệ Thuật] Mảnh Ghép Vấn Đề"),
-            ("art_chat_connection", "💬 [Nghệ Thuật] Giao Tiếp Thấu Hiểu"),
-            ("art_coffee_peace", "☕ [Nghệ Thuật] Tách Cà Phê Bình Yên"),
-            ("art_home_family", "🏡 [Nghệ Thuật] Ngôi Nhà & Gia Đình"),
-            ("art_compass_journey", "🧭 [Nghệ Thuật] La Bàn Hành Trình"),
-            ("art_fire_passion", "🔥 [Nghệ Thuật] Ngọn Lửa Khát Vọng"),
-            ("art_balance_scale", "⚖️ [Nghệ Thuật] Cán Cân Cân Bằng"),
-            ("art_person_thinking", "🤔 [Nghệ Thuật] Suy Tư & Kế Sách"),
-            ("art_person_working", "✍️ [Nghệ Thuật] Bàn Làm Việc & Sáng Tạo")
+            ("art_growth_nature", "🌱 [Nghệ Thuật] Cây Trí Tuệ & Bình Minh"),
+            ("art_idea_wisdom", "💡 [Nghệ Thuật] Bóng Đèn Ý Tưởng Vũ Trụ"),
+            ("art_mountain_peak", "🏔️ [Nghệ Thuật] Đỉnh Núi Vinh Quang & Cực Quang"),
+            ("art_book_knowledge", "📖 [Nghệ Thuật] Sử Ký Đại Nam & Tri Thức"),
+            ("art_time_hourglass", "⏳ [Nghệ Thuật] Đồng Hồ Cát Thiên Hà Thời Gian")
         ]
         for aid, title in artwork_items:
             self.cb_artwork.addItem(title, aid)
@@ -638,13 +644,62 @@ class MainWindow(QMainWindow):
         self.lbl_time_cur.setText("00:00")
         self.slider_seek.setValue(0)
 
+    def on_ai_gen_single_scene(self):
+        row = self.scene_list.currentRow()
+        if row < 0 or row >= len(self.current_scenes):
+            QMessageBox.warning(self, "Chưa chọn cảnh", "Vui lòng chọn một phân cảnh để tạo tranh!")
+            return
+        scene = self.current_scenes[row]
+        self.lbl_status.setText(f"✨ AI đang vẽ tranh 2D anime cho Cảnh {row+1}...")
+        self.btn_ai_gen_single.setEnabled(False)
+
+        def run_ai():
+            try:
+                img_path = self.ai_art_generator.generate_art_for_text(scene.text)
+                self.signals.art_generated.emit(row, img_path)
+            except Exception as e:
+                print(f"Error in AI Art generation: {e}")
+
+        threading.Thread(target=run_ai, daemon=True).start()
+
+    def on_ai_gen_all_scenes(self):
+        if not self.current_scenes:
+            QMessageBox.warning(self, "Chưa có phân cảnh", "Vui lòng phân cảnh kịch bản trước khi tạo tranh AI!")
+            return
+        self.lbl_status.setText("✨ AI đang vẽ tranh cho toàn bộ phân cảnh...")
+        self.btn_ai_gen_all.setEnabled(False)
+
+        def run_all_ai():
+            for idx, sc in enumerate(self.current_scenes):
+                try:
+                    img_path = self.ai_art_generator.generate_art_for_text(sc.text)
+                    self.signals.art_generated.emit(idx, img_path)
+                except Exception as e:
+                    print(f"Error generating art for scene {idx}: {e}")
+
+        threading.Thread(target=run_all_ai, daemon=True).start()
+
+    def _handle_art_generated(self, row: int, img_path: str):
+        if 0 <= row < len(self.current_scenes):
+            self.current_scenes[row].artwork_id = img_path
+            if self.scene_list.currentRow() == row:
+                custom_title = f"✨ [AI Art] {os.path.basename(img_path)}"
+                self.cb_artwork.blockSignals(True)
+                self.cb_artwork.addItem(custom_title, img_path)
+                self.cb_artwork.setCurrentIndex(self.cb_artwork.count() - 1)
+                self.cb_artwork.blockSignals(False)
+                self.canvas_widget.set_scene(self.current_scenes[row], self.cb_theme.currentData())
+            self.lbl_status.setText(f"✨ Đã tạo tranh AI thành công cho Cảnh {row+1}!")
+        self.btn_ai_gen_single.setEnabled(True)
+        self.btn_ai_gen_all.setEnabled(True)
+
     def on_play_all(self):
         if not self.current_scenes:
             return
         if self.is_playing_all:
             self.is_playing_all = False
             self.canvas_widget.pause_preview()
-            self.btn_play_all.setText("🎬 Phát Toàn Bộ Video (Tất Cả Cảnh)")
+            self.btn_play_all.setText("🎬 Phát Toàn Bộ Video")
             self.lbl_status.setText("Đã tạm dừng phát toàn bộ.")
             return
 
@@ -658,7 +713,7 @@ class MainWindow(QMainWindow):
 
     def on_play_preview(self):
         self.is_playing_all = False
-        self.btn_play_all.setText("🎬 Phát Toàn Bộ Video (Tất Cả Cảnh)")
+        self.btn_play_all.setText("🎬 Phát Toàn Bộ Video")
         row = self.scene_list.currentRow()
         if 0 <= row < len(self.current_scenes):
             self.play_scene_at(row, continue_all=False)
@@ -699,7 +754,7 @@ class MainWindow(QMainWindow):
                 self.play_scene_at(next_idx, continue_all=True)
             else:
                 self.is_playing_all = False
-                self.btn_play_all.setText("🎬 Phát Toàn Bộ Video (Tất Cả Cảnh)")
+                self.btn_play_all.setText("🎬 Phát Toàn Bộ Video")
                 self.lbl_status.setText("Đã xem xong toàn bộ video! 🎉")
 
     def _on_canvas_progress_updated(self, progress: float):
@@ -730,7 +785,7 @@ class MainWindow(QMainWindow):
 
     def on_pause_clicked(self):
         self.is_playing_all = False
-        self.btn_play_all.setText("🎬 Phát Toàn Bộ Video (Tất Cả Cảnh)")
+        self.btn_play_all.setText("🎬 Phát Toàn Bộ Video")
         self.canvas_widget.pause_preview()
         self.lbl_status.setText("Đã tạm dừng xem trước.")
 
