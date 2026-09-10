@@ -2,7 +2,7 @@ import os
 import cv2
 import math
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageFont
 from backend.utils import get_asset_path
 
 class ArtisticSketchEngine:
@@ -61,11 +61,11 @@ class ArtisticSketchEngine:
         is_static: bool = False
     ) -> Image.Image:
         """
-        Smooth, Non-Shaking Synchronized Drawing & Inking:
+        Pure, Unobstructed 4K Cinematic Artwork Display (NO TEXT BLOCKING THE VIEW):
         - Phase 1 (0.00 -> 0.40): Elegant energetic line-art pencil sketching
         - Phase 2 (0.40 -> 0.75): Rich vibrant color watercolor wash
         - Phase 3 (0.75 -> 0.85): Smooth hand retreat offscreen
-        - Phase 4 (0.85 -> 1.00): 100% steady, crystal-clear, rock-solid completed artwork (NO JITTER / NO CAMERA SHAKE)
+        - Phase 4 (0.85 -> 1.00): 100% steady, crystal-clear completed artwork with full visual immersion
         """
         color_p, sketch_p = self.get_artwork_paths(art_id)
         
@@ -90,10 +90,7 @@ class ArtisticSketchEngine:
             base_bg[:, :] = [30.0, 41.0, 59.0]
 
         if is_static:
-            frame_pil = Image.fromarray(np.clip(color_img, 0, 255).astype(np.uint8))
-            if sub_text:
-                self._render_dynamic_subtitles(frame_pil, sub_text, 1.0, width, height, font, theme)
-            return frame_pil
+            return Image.fromarray(np.clip(color_img, 0, 255).astype(np.uint8))
 
         # Balanced Pacing Thresholds
         p1_end = 0.40
@@ -131,7 +128,7 @@ class ArtisticSketchEngine:
             active_hand_pos = (min(max(sweep_x + brush_wobble_x, 60), width - 60), min(max(sweep_y + brush_wobble_y, 80), height - 80))
 
         else:
-            # Full color completed (0.75 to 1.00) - Steady & Sharp, ZERO CAMERA SHAKE
+            # Full color completed (0.75 to 1.00) - Steady & Sharp, Pure Clean View
             current_frame_np = color_img.copy()
 
         frame_pil = Image.fromarray(np.clip(current_frame_np, 0, 255).astype(np.uint8))
@@ -158,82 +155,4 @@ class ArtisticSketchEngine:
                 hy = int(active_hand_pos[1] - tip_offset_y + retreat_eased * (height * 0.6))
                 frame_pil.paste(hand_resized, (hx, hy), hand_resized)
 
-        # Render Modern Word-by-Word Highlighted Subtitle Card
-        if sub_text:
-            self._render_dynamic_subtitles(frame_pil, sub_text, progress, width, height, font, theme)
-
         return frame_pil
-
-    def _render_dynamic_subtitles(self, img: Image.Image, text: str, progress: float, width: int, height: int, font: ImageFont.ImageFont, theme: str):
-        """Renders frosted rounded subtitle banner with highlighted active words"""
-        draw = ImageDraw.Draw(img)
-        words = text.split()
-        if not words:
-            return
-
-        if font is None:
-            font_size = int(32 * (height / 1080.0))
-            try:
-                font = ImageFont.truetype("arial.ttf", font_size)
-            except:
-                font = ImageFont.load_default()
-
-        max_sub_w = int(width * 0.82)
-        lines = []
-        current_line = []
-        line_word_indices = []
-        current_line_indices = []
-
-        for idx, w in enumerate(words):
-            current_line.append(w)
-            current_line_indices.append(idx)
-            test_str = " ".join(current_line)
-            bbox = draw.textbbox((0, 0), test_str, font=font)
-            if (bbox[2] - bbox[0]) > max_sub_w and len(current_line) > 1:
-                current_line.pop()
-                current_line_indices.pop()
-                lines.append(" ".join(current_line))
-                line_word_indices.append(current_line_indices)
-                current_line = [w]
-                current_line_indices = [idx]
-        if current_line:
-            lines.append(" ".join(current_line))
-            line_word_indices.append(current_line_indices)
-
-        line_h = int(font.size * 1.35)
-        total_sub_h = len(lines) * line_h
-        sub_y_start = int(height * 0.055)
-
-        max_line_w = 0
-        for l in lines:
-            bbox = draw.textbbox((0, 0), l, font=font)
-            max_line_w = max(max_line_w, bbox[2] - bbox[0])
-
-        pad_x, pad_y = 28, 12
-        card_x1 = int((width - max_line_w) / 2 - pad_x)
-        card_y1 = int(sub_y_start - pad_y)
-        card_x2 = int((width + max_line_w) / 2 + pad_x)
-        card_y2 = int(sub_y_start + total_sub_h + pad_y)
-
-        # Frosted glass card backdrop with golden outline
-        pill_bg = (15, 23, 42)
-        draw.rounded_rectangle([card_x1, card_y1, card_x2, card_y2], radius=16, fill=pill_bg, outline=(234, 179, 8), width=2)
-
-        active_word_idx = int(progress * len(words))
-
-        for l_idx, (line_text, word_indices) in enumerate(zip(lines, line_word_indices)):
-            line_bbox = draw.textbbox((0, 0), line_text, font=font)
-            line_w = line_bbox[2] - line_bbox[0]
-            cur_x = (width - line_w) / 2
-            cur_y = sub_y_start + l_idx * line_h
-
-            line_words = line_text.split()
-            for w_str, global_w_idx in zip(line_words, word_indices):
-                if global_w_idx <= active_word_idx:
-                    word_color = (250, 204, 21) # Luminous Gold
-                else:
-                    word_color = (241, 245, 249) # Clean White
-
-                draw.text((cur_x, cur_y), w_str, font=font, fill=word_color)
-                w_bbox = draw.textbbox((0, 0), w_str + " ", font=font)
-                cur_x += (w_bbox[2] - w_bbox[0])

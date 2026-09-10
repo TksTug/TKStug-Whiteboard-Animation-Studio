@@ -1,18 +1,20 @@
 import re
 from backend.drawing_templates import TEMPLATES, find_best_template_for_text
 
+# Priority Ordered Mapping: More specific historical events come first
 HISTORICAL_KEYWORD_MAPPING = [
-    ("art_vn_trong_dong", ["trống đồng", "đông sơn", "hùng vương", "văn lang", "âu lạc", "nguồn cội", "tổ tiên", "tiên rồng", "sơ khai"]),
-    ("art_vn_hai_ba_trung", ["hai bà trưng", "trưng trắc", "trưng nhị", "cưỡi voi", "mê linh", "hát môn", "nữ tướng", "khởi nghĩa"]),
-    ("art_vn_bach_dang", ["bạch đằng", "cọc gỗ", "thủy chiến", "thuyền chiến", "ngô quyền", "trần hưng đạo", "đông a", "mông nguyên", "sát thát", "sông bạch đằng"]),
-    ("art_vn_hoang_thanh", ["thăng long", "hoàng thành", "kinh đô", "cột cờ", "hà nội", "lý thái tổ", "dời đô", "chiếu dời đô", "đại la"]),
-    ("art_mountain_peak", ["lam sơn", "lê lợi", "nguyễn trãi", "núi rừng", "thuận thiên", "bình định vương"]),
-    ("art_vn_quang_trung", ["quang trung", "nguyễn huệ", "ngọc hồi", "đống đa", "quân thanh", "áo vải", "hoàng đế", "đại phá", "kỷ dậu"]),
-    ("art_vn_co_do_hue", ["cố đô", "huế", "nhà nguyễn", "ngọ môn", "sông hương", "kinh thành", "tử cấm thành"]),
-    ("art_vn_dien_bien_phu", ["điện biên phủ", "chiến dịch", "lừng lẫy", "năm châu", "chiến hào", "đại tướng", "võ nguyên giáp", "khoét núi"]),
-    ("art_trophy_glory", ["khải hoàn", "đại thắng", "ba mươi tháng tư", "toàn thắng", "chiến thắng", "mùa xuân 1975"]),
-    ("art_vn_ban_do", ["việt nam", "non sông", "bản đồ", "đất nước", "quê hương", "hoàng sa", "trường sa", "chủ quyền", "độc lập", "dân tộc", "móng cái", "cà mau", "lũng cú", "gấm vóc"]),
-    ("art_rocket_breakthrough", ["kỷ nguyên", "vươn mình", "hội nhập", "công nghệ", "thịnh vượng", "tương lai"])
+    ("art_vn_nha_tran", ["mông - nguyên", "mông nguyên", "đông a", "diên hồng", "sát thát", "nhà trần", "hàm tử", "chương dương"]),
+    ("art_vn_quang_trung", ["quang trung", "nguyễn huệ", "ngọc hồi", "khương thượng", "đống đa", "mãn thanh", "áo vải cờ đào", "kỷ dậu", "tây sơn"]),
+    ("art_vn_le_loi_lam_son", ["lam sơn", "lê lợi", "nguyễn trãi", "bình định vương", "thuận thiên", "nhà minh", "nghĩa quân"]),
+    ("art_vn_hai_ba_trung", ["hai bà trưng", "trưng trắc", "trưng nhị", "cưỡi voi", "mê linh", "tô định", "lĩnh nam", "người phụ nữ"]),
+    ("art_vn_bach_dang", ["bạch đằng", "cọc gỗ", "ngô quyền", "nam hán", "lưu hoằng tháo", "thủy chiến", "chín trăm ba mươi tám"]),
+    ("art_vn_hoang_thanh", ["thăng long", "chiếu dời đô", "lý thái tổ", "đại la", "hoa lư", "ngàn năm văn hiến", "một ngàn không trăm mười"]),
+    ("art_vn_co_do_hue", ["cố đô huế", "cố đô", "sông hương", "ngọ môn", "thái hòa", "lăng tẩm", "nhã nhạc", "kinh thành huế"]),
+    ("art_vn_dien_bien_phu", ["điện biên phủ", "de castries", "khoét núi", "lừng lẫy năm châu", "năm mươi tư", "hồ chí minh", "thực dân pháp"]),
+    ("art_vn_bien_dao_hoang_sa", ["sa vĩ", "móng cái", "cà mau", "hoàng sa", "trường sa", "biển đảo", "lũng cú", "hải đảo", "tấc biển"]),
+    ("art_vn_ky_nguyen_tuong_lai", ["kỷ nguyên mới", "kỷ nguyên", "tri thức", "sáng tạo", "hội nhập", "cường quốc", "vươn mình", "tương lai"]),
+    ("art_vn_trong_dong", ["trống đồng", "đông sơn", "vua hùng", "văn lang", "chim lạc", "phong châu", "nguồn cội", "tiên rồng", "thuở sơ khai"]),
+    ("art_vn_ban_do", ["bốn ngàn năm", "dải đất hình chữ s", "tiền nhân", "bờ cõi", "giữ nước", "non sông", "bản đồ"])
 ]
 
 ARTWORK_MAPPING = {
@@ -77,36 +79,32 @@ class SceneManager:
         if not full_text or not full_text.strip():
             return []
 
+        # Split strictly by paragraph so user's 12 paragraphs become exactly 12 scenes
         raw_paragraphs = [p.strip() for p in full_text.splitlines() if p.strip()]
-        chunks = []
 
-        for p in raw_paragraphs:
-            sentences = re.split(r'(?<=[.!?…])\s+', p)
-            current_chunk = []
-            current_word_count = 0
-
-            for s in sentences:
-                s = s.strip()
-                if not s:
-                    continue
-                words = s.split()
-                if current_word_count + len(words) > 55 and current_chunk:
-                    chunks.append(" ".join(current_chunk))
-                    current_chunk = [s]
-                    current_word_count = len(words)
-                else:
-                    current_chunk.append(s)
-                    current_word_count += len(words)
-
-            if current_chunk:
-                chunks.append(" ".join(current_chunk))
+        titles = [
+            "1. Khởi Nguồn Non Sông Đại Việt",
+            "2. Vua Hùng & Trống Đồng Đông Sơn",
+            "3. Hai Bà Trưng Khởi Nghĩa Mê Linh",
+            "4. Ngô Quyền Thủy Chiến Bạch Đằng",
+            "5. Lý Thái Tổ Dời Đô Thăng Long",
+            "6. Nhà Trần & Hào Khí Đông A Sát Thát",
+            "7. Lê Lợi & Gươm Thần Lam Sơn",
+            "8. Vua Quang Trung Đại Phá Quân Thanh",
+            "9. Cố Đô Huế Di Sản Hoàng Triều",
+            "10. Chiến Thắng Điện Biên Phủ",
+            "11. Biển Đảo Hoàng Sa - Trường Sa",
+            "12. Kỷ Nguyên Mới Vươn Tầm Thế Giới"
+        ]
 
         self.scenes = []
-        for i, chunk in enumerate(chunks):
-            tmpl = find_best_template_for_text(chunk)
-            hist_art = find_best_artwork_for_history(chunk)
-            short_name = tmpl['name'].split('&')[0].strip() if tmpl else "Lịch Sử"
-            scene = StoryScene(i, chunk, f"Cảnh {i+1}: {short_name}", tmpl)
+        for i, paragraph in enumerate(raw_paragraphs):
+            tmpl = find_best_template_for_text(paragraph)
+            hist_art = find_best_artwork_for_history(paragraph)
+            short_name = tmpl['name'].split('&')[0].strip() if tmpl else f"Cảnh {i+1}"
+            custom_title = titles[i] if i < len(titles) else f"Cảnh {i+1}: {short_name}"
+            
+            scene = StoryScene(i, paragraph, custom_title, tmpl)
             if hist_art:
                 scene.artwork_id = hist_art
             self.scenes.append(scene)

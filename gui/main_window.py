@@ -558,17 +558,21 @@ class MainWindow(QMainWindow):
         self.cb_artwork.clear()
         
         artwork_items = [
-            ("art_vn_quang_trung", "🇻🇳 [Lịch Sử] Vua Quang Trung Đại Phá Quân Thanh"),
-            ("art_vn_bach_dang", "🇻🇳 [Lịch Sử] Trận Thủy Chiến Sông Bạch Đằng"),
-            ("art_vn_trong_dong", "🇻🇳 [Lịch Sử] Trống Đồng Đông Sơn & Hùng Vương"),
-            ("art_vn_hai_ba_trung", "🇻🇳 [Lịch Sử] Hai Bà Trưng Cưỡi Voi Ra Trận"),
-            ("art_vn_dien_bien_phu", "🇻🇳 [Lịch Sử] Chiến Thắng Điện Biên Phủ"),
-            ("art_vn_hoang_thanh", "🇻🇳 [Lịch Sử] Hoàng Thành Thăng Long & Cột Cờ"),
-            ("art_vn_co_do_hue", "🇻🇳 [Lịch Sử] Cố Đô Huế & Ngọ Môn Hoàng Thành"),
-            ("art_vn_ban_do", "🇻🇳 [Lịch Sử] Bản Đồ Non Sông Việt Nam"),
+            ("art_vn_ban_do", "🗺️ [Lịch Sử 1] Bản Đồ Non Sông Gấm Vóc"),
+            ("art_vn_trong_dong", "🥁 [Lịch Sử 2] Vua Hùng & Trống Đồng Đông Sơn"),
+            ("art_vn_hai_ba_trung", "🐘 [Lịch Sử 3] Hai Bà Trưng Cưỡi Voi Ra Trận"),
+            ("art_vn_bach_dang", "⛵ [Lịch Sử 4] Ngô Quyền Thủy Chiến Sông Bạch Đằng"),
+            ("art_vn_hoang_thanh", "🏯 [Lịch Sử 5] Lý Thái Tổ Dời Đô Thăng Long"),
+            ("art_vn_nha_tran", "⚔️ [Lịch Sử 6] Nhà Trần & Hào Khí Đông A Sát Thát"),
+            ("art_vn_le_loi_lam_son", "🗡️ [Lịch Sử 7] Lê Lợi & Gươm Thần Lam Sơn"),
+            ("art_vn_quang_trung", "👑 [Lịch Sử 8] Vua Quang Trung Đại Phá Quân Thanh"),
+            ("art_vn_co_do_hue", "🏰 [Lịch Sử 9] Cố Đô Huế & Ngọ Môn Hoàng Thành"),
+            ("art_vn_dien_bien_phu", "🎖️ [Lịch Sử 10] Chiến Thắng Điện Biên Phủ"),
+            ("art_vn_bien_dao_hoang_sa", "🌊 [Lịch Sử 11] Chủ Quyền Biển Đảo Hoàng Sa - Trường Sa"),
+            ("art_vn_ky_nguyen_tuong_lai", "🚀 [Lịch Sử 12] Kỷ Nguyên Mới Vươn Tầm Thế Giới"),
             ("art_growth_nature", "🌱 [Nghệ Thuật] Cây Trí Tuệ & Bình Minh"),
             ("art_idea_wisdom", "💡 [Nghệ Thuật] Bóng Đèn Ý Tưởng Vũ Trụ"),
-            ("art_mountain_peak", "🏔️ [Nghệ Thuật] Đỉnh Núi Vinh Quang & Cực Quang"),
+            ("art_mountain_peak", "🏔️ [Nghệ Thuật] Đỉnh Núi Vinh Quang"),
             ("art_book_knowledge", "📖 [Nghệ Thuật] Sử Ký Đại Nam & Tri Thức"),
             ("art_time_hourglass", "⏳ [Nghệ Thuật] Đồng Hồ Cát Thiên Hà Thời Gian")
         ]
@@ -591,21 +595,21 @@ class MainWindow(QMainWindow):
         self.cb_voice.setCurrentIndex(target_idx)
 
     def load_sample_story(self):
-        sample = (
-            "Hơn bốn ngàn năm lịch sử dựng nước và giữ nước, mảnh đất hình chữ S đã tôi luyện nên ý chí quật cường và tinh thần bất khuất của dân tộc Việt Nam.\n\n"
-            "Từ thuở sơ khai của các vua Hùng dựng nước Văn Lang, tiếng Trống Đồng Đông Sơn trầm hùng vang vọng khắp núi sông, hun đúc nên nguồn cội thiêng liêng của dòng giống Tiên Rồng.\n\n"
-            "Mùa xuân năm bốn mươi, nợ nước thù nhà sục sôi, Hai Bà Trưng cưỡi voi phất cờ khởi nghĩa tại Mê Linh, tiếng hô xung trận chấn động bờ cõi, mở ra trang sử vẻ vang của người phụ nữ Việt Nam.\n\n"
-            "Đến năm chín trăm ba mươi tám, trên dòng sông Bạch Đằng cuộn sóng gầm vang, trận địa cọc gỗ ngầm của Ngô Quyền đã nhấn chìm chiến thuyền quân thù, chấm dứt hơn một ngàn năm Bắc thuộc.\n\n"
-            "Mùa thu năm một ngàn không trăm mười, vua Lý Thái Tổ nhìn thấy rồng vàng bay lên, quyết định ban Chiếu dời đô về Thăng Long, đặt nền móng ngàn năm văn hiến cho kinh đô nước Việt.\n\n"
-            "Vào thế kỷ thứ mười ba, trước vó ngựa hung tàn của đế chế Mông Nguyên, quân dân nhà Trần với hào khí Đông A rực lửa và lời thề Sát Thát đã ba lần quét sạch giặc ngoại xâm.\n\n"
-            "Nơi núi rừng Lam Sơn hiểm trở, Lê Lợi cùng Nguyễn Trãi nếm mật nằm gai mười năm trường kỳ, dùng thanh gươm Thuận Thiên dẹp tan quân Minh, lập lại nền thái bình muôn thuở.\n\n"
-            "Mùa xuân Kỷ Dậu năm một ngàn bảy trăm tám mươi chín, Hoàng đế Quang Trung mặc áo vải cờ đào thần tốc hành quân, đại phá hai mươi chín vạn quân Thanh tại Ngọc Hồi Đống Đa vang dội.\n\n"
-            "Bên dòng sông Hương thơ mộng, Cố Đô Huế sừng sững uy nghiêm với Ngọ Môn và cung điện cổ kính, lưu giữ tinh hoa kiến trúc cùng bản sắc văn hóa hoàng triều ngàn đời.\n\n"
-            "Tháng năm năm một ngàn chín trăm năm mươi tư, chiến dịch Điện Biên Phủ toàn thắng lừng lẫy năm châu chấn động địa cầu, khẳng định sức mạnh đại đoàn kết toàn dân.\n\n"
-            "Từ đỉnh đầu Lũng Cú Móng Cái đến mũi Cà Mau, cùng hai quần đảo Hoàng Sa và Trường Sa thiêng liêng, non sông Việt Nam liền một dải, chủ quyền lãnh thổ đời đời bất khả xâm phạm.\n\n"
-            "Kế thừa truyền thống kiên cường của cha ông, thế hệ hôm nay vững vàng bước vào kỷ nguyên mới, viết tiếp những trang sử vẻ vang đưa non sông Việt Nam vươn tầm thế giới."
-        )
-        self.script_input.setPlainText(sample)
+        sample_paragraphs = [
+            "Trải qua hơn bốn ngàn năm lịch sử dựng nước và giữ nước đầy bão táp, dải đất hình chữ S nép mình bên bờ Biển Đông đã trải qua biết bao thăng trầm, biến thiên của thời đại. Từng tấc đất nơi đây đều thấm đẫm mồ hôi khai hoang và máu xương của các bậc tiền nhân ngã xuống để giữ gìn bờ cõi. Chính dòng chảy khắc nghiệt nhưng kiêu hùng ấy đã tôi luyện nên một tinh thần gang thép, đúc kết thành ý chí quật cường, lòng kiên trung và đức hy sinh bất khuất – thứ bản lĩnh trường tồn đã chở che cho dân tộc Việt Nam vượt qua muôn vàn kiếp nạn sinh tử.",
+            "Từ thuở sơ khai huyền thoại, khi các vua Hùng khai sơn phá thạch đặt nền móng dựng xây nhà nước Văn Lang trên miền đất Phong Châu cổ kính, nguồn cội dân tộc đã bắt đầu đâm chồi nảy lộc. Tiếng Trống Đồng Đông Sơn trầm hùng, linh thiêng vang vọng qua từng ghềnh thác non sông, khắc họa sinh động hình ảnh cánh chim Lạc vút bay cùng khát vọng muôn đời no ấm. Âm vang ấy chính là lời nhắc nhở thiêng liêng về bọc trăm trứng, gắn kết muôn con người trên dải đất này trong nghĩa đồng bào ruột thịt, mãi mãi tự hào với nguồn gốc con Rồng cháu Tiên bất diệt.",
+            "Mùa xuân năm bốn mươi sau Công nguyên, trước ách thống trị bạo tàn và dã tâm đồng hóa của quân đô hộ phương Bắc, ngọn lửa căm hờn nợ nước thù nhà đã bùng cháy dữ dội. Hai Bà Trưng hiên ngang cưỡi voi chiến, phất cao ngọn cờ tụ nghĩa tại vùng đất Mê Linh, hiệu triệu muôn dân khắp cõi đứng lên giành lại giang sơn. Tiếng hô xung trận vang rền như sấm dậy, quét sạch dinh lũy thái thú Tô Định, làm rung chuyển cả cõi Lĩnh Nam và tạc vào dòng thời gian trang sử vàng chói lọi, khẳng định khí phách cùng tầm vóc phi thường của người phụ nữ Việt Nam.",
+            "Đến mùa đông năm chín trăm ba mươi tám, trên dòng sông Bạch Đằng mênh mang sóng nước cuộn trào, bản hùng ca khép lại ngàn năm tăm tối đã được viết nên bằng trí tuệ và lòng quả cảm tuyệt vời. Bằng tài thao lược kiệt xuất, Ngô Quyền đã cho cắm hàng vạn cọc gỗ bịt sắt nhọn hoắt xuống lòng sông, lợi dụng thủy triều lên xuống để giăng bẫy tiêu diệt đoàn chiến thuyền Nam Hán hung hãn. Máu giặc nhuộm đỏ ngọn triều, tướng giặc Lưu Hoằng Tháo đền tội, chính thức chôn vùi vĩnh viễn mộng bành trướng của ngoại bang và mở toang cánh cửa bước vào kỷ nguyên độc lập tự chủ cho non sông.",
+            "Mùa thu năm một ngàn không trăm mười, nhận thấy vùng đất Hoa Lư chật hẹp không còn đủ sức dung dưỡng thế nước đang lên, vua Lý Thái Tổ đã có quyết định mang tầm nhìn thiên niên kỷ. Khi thuyền rồng vừa cập bến Đại La, ngắm nhìn thế đất rồng cuộn hổ ngồi và hình ảnh rồng vàng bay vút lên trời cao, ngài liền ban “Chiếu dời đô”, đổi tên kinh thành mới thành Thăng Long rực rỡ. Quyết định định đô ấy không chỉ mở ra thời kỳ hưng thịnh bậc nhất của quốc gia Đại Việt, mà còn đặt nền móng vững bền cho mảnh đất ngàn năm văn hiến, trái tim thiêng liêng của cả nước.",
+            "Bước sang thế kỷ thứ mười ba, cả thế giới kinh hoàng rúng động trước vó ngựa tàn bạo của đế chế Mông - Nguyên đi đến đâu cỏ cây rạp ngã đến đó, nhưng bức thành đồng Đại Việt đã chặn đứng cơn cuồng phong ấy. Với hào khí Đông A sục sôi chảy tràn trong huyết quản, từ lời thề quyết chiến của các bô lão tại hội nghị Diên Hồng đến hai chữ “Sát Thát” khắc sâu trên cánh tay từng người lính, quân dân nhà Trần đã kết thành một khối đá tảng. Ba lần kháng chiến là ba lần toàn thắng, những Chương Dương, Hàm Tử, Bạch Đằng đã chôn vùi vĩnh viễn uy danh bách chiến bách thắng của giặc thù phương Bắc.",
+            "Nơi núi rừng Lam Sơn trập trùng mây mù và hiểm trở, một cuộc trường chinh vĩ đại khác lại bùng lên từ tro tàn của sự áp bức dưới ách đô hộ nhà Minh. Bình Định Vương Lê Lợi cùng quân sư kiệt xuất Nguyễn Trãi đã nếm mật nằm gai suốt mười năm ròng rã, lấy yếu chống mạnh, lấy ít địch nhiều, lấy đại nghĩa thắng hung tàn để vượt qua những ngày gian truân thiếu lương đói rét. Nhờ ngọn cờ chính nghĩa và sức mạnh đoàn kết của toàn dân, thanh gươm Thuận Thiên đã tung hoành ngang dọc, quét sạch bóng quân thù, lập lại nền độc lập thái bình trường tồn và để lại áng thiên cổ hùng văn bất hủ.",
+            "Mùa xuân Kỷ Dậu năm một ngàn bảy trăm tám mươi chín, khi hai mươi chín vạn quân Thanh ngạo mạn tràn sang chiếm đóng kinh thành, vận nước lại đứng trước bờ vực hiểm nghèo. Từ miền Trung xa xôi, người anh hùng áo vải cờ đào Nguyễn Huệ - Hoàng đế Quang Trung đã thực hiện một cuộc hành quân thần tốc kỳ diệu chưa từng có trong lịch sử quân sự. Bằng khí thế sấm sét và tài dùng binh tuyệt đỉnh, nghĩa quân Tây Sơn đã đánh tan tan tác các đồn lũy Ngọc Hồi, Khương Thượng, tiến thẳng vào giải phóng Thăng Long rực rỡ sắc cành đào, đập tan giấc mộng xâm lược của triều đình Mãn Thanh.",
+            "Trầm mặc soi bóng bên dòng sông Hương thơ mộng êm trôi, Cố Đô Huế sừng sững uy nghiêm như một chứng tích sống động lưu giữ tinh hoa của triều đại phong kiến cuối cùng. Nét trầm mặc của Ngọ Môn rêu phong, điện Thái Hòa lộng lẫy cùng hệ thống lăng tẩm uy nghi hòa quyện tuyệt đối với cảnh sắc thiên nhiên hữu tình, phản chiếu đỉnh cao của nghệ thuật tạo tác và tư tưởng phương Đông sâu sắc. Nơi đây không đơn thuần là những bức tường thành cổ kính, mà còn là linh hồn của một thời kỳ vàng son, nơi kết tinh nhã nhạc cung đình và bản sắc văn hóa ngàn năm của đất nước.",
+            "Tháng năm năm một ngàn chín trăm năm mươi tư, sau năm mươi sáu ngày đêm “khoét núi, ngủ hầm, mưa dầm, cơm vắt, máu trộn bùn non”, chiến dịch Điện Biên Phủ đã kết thúc với lá cờ quyết chiến quyết thắng tung bay kiêu hãnh trên nóc hầm De Castries. Thắng lợi lịch sử này đã đập tan hoàn toàn tập đoàn cứ điểm bất khả xâm phạm của thực dân Pháp, tạo nên một cơn địa chấn toàn cầu “lừng lẫy năm châu, chấn động địa cầu”. Đây là mốc son chói lọi của thời đại Hồ Chí Minh, minh chứng rực rỡ cho sức mạnh vĩ đại của khối đại đoàn kết toàn dân tộc khi đứng lên giành lại tự do.",
+            "Từ đỉnh đầu Lũng Cú cheo leo nơi địa đầu Tổ quốc, qua mũi Sa Vĩ - Móng Cái đón ngọn gió đông đầu tiên, xuôi về tận Đất Mũi Cà Mau rừng đước bạt ngàn vươn ra biển lớn, non sông Việt Nam mãi nối liền một dải gấm vóc liền mạch. Cùng với hai quần đảo máu thịt Hoàng Sa và Trường Sa hiên ngang giữa muôn trùng đầu sóng ngọn gió, mỗi tấc đất, tấc biển của giang sơn đều đã thấm đượm mồ hôi và xương máu của bao thế hệ đi trước. Chủ quyền thiêng liêng ấy là ranh giới bất biến, là danh dự và là chân lý đời đời bất khả xâm phạm của người Việt.",
+            "Kế thừa mạch nguồn truyền thống kiên cường và lòng tự hào được bồi đắp qua hàng ngàn năm phong ba của cha ông, thế hệ hôm nay đang vững vàng vươn mình bước vào kỷ nguyên mới – kỷ nguyên của tri thức, sáng tạo và hội nhập sâu rộng. Mang trong tim ngọn lửa khát vọng cống hiến cháy bỏng cùng ý chí tự lực tự cường, những người con đất Việt đương đại quyết tâm đem trí tuệ và bản lĩnh viết tiếp những trang sử hào hùng, bảo vệ vững chắc nền độc lập và đưa vị thế nước nhà tự tin sánh vai cùng các cường quốc năm châu."
+        ]
+        self.script_input.setPlainText("\n\n".join(sample_paragraphs))
         self.on_auto_segment()
     def _precache_all_scenes_audio(self):
         """Pre-synthesizes audio in background so frame switching is instantaneous (0 delay)"""
