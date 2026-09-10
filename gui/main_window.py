@@ -60,6 +60,15 @@ class WhiteboardCanvasWidget(QWidget):
         self.audio_output = QAudioOutput()
         self.player = QMediaPlayer()
         self.player.setAudioOutput(self.audio_output)
+        self.player.mediaStatusChanged.connect(self._on_media_status_changed)
+
+    def _on_media_status_changed(self, status):
+        if status == QMediaPlayer.MediaStatus.EndOfMedia and self.is_animating:
+            self.progress = 1.0
+            self.is_animating = False
+            self.timer.stop()
+            cur_idx = getattr(self.current_scene, "scene_index", 0)
+            self.scene_completed.emit(cur_idx)
 
     def set_scene(self, scene: StoryScene, theme: str = "vintage"):
         self.current_scene = scene
@@ -806,15 +815,16 @@ class MainWindow(QMainWindow):
             self.lbl_status.setText(f"Đang phát Cảnh {row+1}/{len(self.current_scenes)} ({dur:.1f}s)...")
 
     def _on_scene_completed(self, completed_idx: int):
-        if self.is_playing_all:
-            next_idx = completed_idx + 1
-            if next_idx < len(self.current_scenes):
-                self.scene_list.setCurrentRow(next_idx)
-                self.play_scene_at(next_idx, continue_all=True)
-            else:
-                self.is_playing_all = False
-                self.btn_play_all.setText("🎬 Phát Toàn Bộ Video")
-                self.lbl_status.setText("Đã xem xong toàn bộ video! 🎉")
+        next_idx = completed_idx + 1
+        if next_idx < len(self.current_scenes):
+            self.scene_list.setCurrentRow(next_idx)
+            self.lbl_status.setText(f"Tự động chuyển sang Cảnh {next_idx+1}/{len(self.current_scenes)}...")
+            # Auto advance to next frame and text seamlessly with 350ms natural pause
+            QTimer.singleShot(350, lambda: self.play_scene_at(next_idx, continue_all=True))
+        else:
+            self.is_playing_all = False
+            self.btn_play_all.setText("🎬 Phát Toàn Bộ Video")
+            self.lbl_status.setText("Đã phát xong toàn bộ câu chuyện lịch sử! 🎉")
 
     def _on_canvas_progress_updated(self, progress: float):
         self.slider_seek.blockSignals(True)
