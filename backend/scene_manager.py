@@ -1,6 +1,17 @@
 import re
 from backend.drawing_templates import TEMPLATES, find_best_template_for_text
 
+HISTORICAL_KEYWORD_MAPPING = [
+    ("art_vn_bach_dang", ["bạch đằng", "cọc gỗ", "thủy chiến", "thuyền chiến", "ngô quyền", "trần hưng đạo", "trận đánh", "chiến thuyền", "sông bạch đằng"]),
+    ("art_vn_trong_dong", ["trống đồng", "đông sơn", "hùng vương", "văn lang", "âu lạc", "nguồn cội", "ngàn năm", "tổ tiên", "văn hóa"]),
+    ("art_vn_hai_ba_trung", ["hai bà trưng", "trưng trắc", "trưng nhị", "cưỡi voi", "mê linh", "nữ tướng", "khởi nghĩa"]),
+    ("art_vn_quang_trung", ["quang trung", "nguyễn huệ", "ngọc hồi", "đống đa", "quân thanh", "áo vải", "hoàng đế", "đại phá"]),
+    ("art_vn_dien_bien_phu", ["điện biên phủ", "chiến dịch", "vỡ òa", "lừng lẫy", "năm châu", "chiến hào", "đại tướng", "võ nguyên giáp"]),
+    ("art_vn_hoang_thanh", ["thăng long", "hoàng thành", "kinh đô", "cột cờ", "hà nội", "lý thái tổ", "dời đô"]),
+    ("art_vn_co_do_hue", ["cố đô", "huế", "nhà nguyễn", "ngọ môn", "sông hương", "kinh thành"]),
+    ("art_vn_ban_do", ["việt nam", "non sông", "bản đồ", "đất nước", "quê hương", "hoàng sa", "trường sa", "chủ quyền", "độc lập", "dân tộc"])
+]
+
 ARTWORK_MAPPING = {
     "growth_seed": "art_growth_nature",
     "lightbulb_idea": "art_idea_wisdom",
@@ -30,14 +41,28 @@ ARTWORK_MAPPING = {
     "person_working": "art_person_working"
 }
 
+def find_best_artwork_for_history(text: str) -> str:
+    clean = text.lower()
+    for aid, kws in HISTORICAL_KEYWORD_MAPPING:
+        for kw in kws:
+            if kw in clean:
+                return aid
+    return None
+
 class StoryScene:
     def __init__(self, scene_index: int, text: str, title: str = "", template: dict = None, artwork_id: str = None):
         self.scene_index = scene_index
         self.text = text.strip()
         self.title = title or f"Phân cảnh {scene_index + 1}"
         self.template = template or find_best_template_for_text(self.text)
-        tmpl_id = self.template.get("id", "growth_seed") if isinstance(self.template, dict) else "growth_seed"
-        self.artwork_id = artwork_id or ARTWORK_MAPPING.get(tmpl_id, "art_growth_nature")
+        
+        hist_art = find_best_artwork_for_history(self.text)
+        if hist_art:
+            self.artwork_id = hist_art
+        else:
+            tmpl_id = self.template.get("id", "growth_seed") if isinstance(self.template, dict) else "growth_seed"
+            self.artwork_id = artwork_id or ARTWORK_MAPPING.get(tmpl_id, "art_growth_nature")
+            
         self.audio_path = None
         self.duration = 4.0
 
