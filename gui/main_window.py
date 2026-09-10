@@ -24,6 +24,7 @@ from backend.utils import get_asset_path
 class WorkerSignals(QObject):
     progress = pyqtSignal(int, str)
     finished = pyqtSignal(bool, str)
+    preview_ready = pyqtSignal(int, str, float)
 
 class WhiteboardCanvasWidget(QWidget):
     """Live interactive preview player showing multi-layer pencil sketch + watercolor inking in real-time"""
@@ -82,11 +83,13 @@ class WhiteboardCanvasWidget(QWidget):
             self.player.play()
 
         self.timer.start(20) # 50 fps smooth tick
+        self.update()
 
     def pause_preview(self):
         self.is_animating = False
         self.timer.stop()
         self.player.pause()
+        self.update()
 
     def on_tick(self):
         self.elapsed_ms += 20
@@ -109,18 +112,19 @@ class WhiteboardCanvasWidget(QWidget):
             painter.drawText(QRectF(0, 0, w, h), Qt.AlignmentFlag.AlignCenter, "Màn hình xem trước trực tiếp (Live Player)")
             return
 
-        art_id = getattr(self.current_scene, "artwork_id", "art_growth_nature")
-        display_progress = self.progress if self.is_animating else (1.0 if self.progress == 0 else self.progress)
+        art_id = getattr(self.current_scene, "artwork_id", "art_vn_quang_trung")
+        is_static = not self.is_animating and (self.progress == 0.0 or self.progress == 1.0)
 
         # Render high-grade artistic frame
         frame_pil = self.artistic_engine.render_artistic_frame(
             art_id=art_id,
-            progress=display_progress,
+            progress=self.progress,
             width=w,
             height=h,
             sub_text=self.current_scene.text,
             hand_img=self.hand_pil if self.is_animating else None,
-            theme=self.theme
+            theme=self.theme,
+            is_static=is_static
         )
 
         # Convert to QImage and draw
@@ -140,6 +144,9 @@ class MainWindow(QMainWindow):
         self.scene_manager = SceneManager()
         self.video_renderer = VideoRenderer(self.tts_engine)
         self.current_scenes: list[StoryScene] = []
+
+        self.signals = WorkerSignals()
+        self.signals.preview_ready.connect(self._handle_preview_ready)
 
         self.setup_ui()
         self.apply_theme()
@@ -414,13 +421,13 @@ class MainWindow(QMainWindow):
         self.cb_artwork.clear()
         
         artwork_items = [
-            ("art_vn_trong_dong", "🇻🇳 [Lịch Sử] Trống Đồng Đông Sơn & Hùng Vương"),
-            ("art_vn_bach_dang", "🇻🇳 [Lịch Sử] Trận Thủy Chiến Sông Bạch Đằng"),
-            ("art_vn_hai_ba_trung", "🇻🇳 [Lịch Sử] Hai Bà Trưng Cưỡi Voi Ra Trận"),
             ("art_vn_quang_trung", "🇻🇳 [Lịch Sử] Vua Quang Trung Đại Phá Quân Thanh"),
-            ("art_vn_hoang_thanh", "🇻🇳 [Lịch Sử] Hoàng Thành Thăng Long & Cột Cờ Hà Nội"),
-            ("art_vn_co_do_hue", "🇻🇳 [Lịch Sử] Cố Đô Huế & Ngọ Môn Hoàng Thành"),
+            ("art_vn_bach_dang", "🇻🇳 [Lịch Sử] Trận Thủy Chiến Sông Bạch Đằng"),
+            ("art_vn_trong_dong", "🇻🇳 [Lịch Sử] Trống Đồng Đông Sơn & Hùng Vương"),
+            ("art_vn_hai_ba_trung", "🇻🇳 [Lịch Sử] Hai Bà Trưng Cưỡi Voi Ra Trận"),
             ("art_vn_dien_bien_phu", "🇻🇳 [Lịch Sử] Chiến Thắng Điện Biên Phủ"),
+            ("art_vn_hoang_thanh", "🇻🇳 [Lịch Sử] Hoàng Thành Thăng Long & Cột Cờ"),
+            ("art_vn_co_do_hue", "🇻🇳 [Lịch Sử] Cố Đô Huế & Ngọ Môn Hoàng Thành"),
             ("art_vn_ban_do", "🇻🇳 [Lịch Sử] Bản Đồ Non Sông Việt Nam"),
             ("art_growth_nature", "🌱 [Nghệ Thuật] Mầm Cây & Bình Minh"),
             ("art_idea_wisdom", "💡 [Nghệ Thuật] Bóng Đèn Trí Tuệ & Ý Tưởng"),
@@ -519,7 +526,7 @@ Và trong thế kỷ hai mươi, chiến thắng Điện Biên Phủ lừng lẫ
         self.scene_text_edit.blockSignals(False)
 
         # Select corresponding artwork in combo
-        art_id = getattr(scene, "artwork_id", "art_growth_nature")
+        art_id = getattr(scene, "artwork_id", "art_vn_quang_trung")
         found = False
         for i in range(self.cb_artwork.count()):
             if self.cb_artwork.itemData(i) == art_id:
@@ -554,15 +561,17 @@ Và trong thế kỷ hai mươi, chiến thắng Điện Biên Phủ lừng lẫ
                 else:
                     dur = scene.duration
                     audio_p = scene.audio_path
-                return audio_p, dur
+                self.signals.preview_ready.emit(row, audio_p, dur)
 
-            def on_done():
-                audio_p, dur = synth_and_play()
-                self.canvas_widget.set_scene(scene, self.cb_theme.currentData())
-                self.canvas_widget.start_preview(audio_p, dur)
-                self.lbl_status.setText(f"Đang phát xem trước Cảnh {row+1} ({dur:.1f}s)...")
+            threading.Thread(target=synth_and_play, daemon=True).start()
 
-            threading.Thread(target=on_done, daemon=True).start()
+    def _handle_preview_ready(self, row: int, audio_p: str, dur: float):
+        """Thread-safe handler executing on Main GUI Thread"""
+        if 0 <= row < len(self.current_scenes):
+            scene = self.current_scenes[row]
+            self.canvas_widget.set_scene(scene, self.cb_theme.currentData())
+            self.canvas_widget.start_preview(audio_p, dur)
+            self.lbl_status.setText(f"Đang phát xem trước Cảnh {row+1} ({dur:.1f}s)...")
 
     def on_scene_text_changed(self):
         row = self.scene_list.currentRow()

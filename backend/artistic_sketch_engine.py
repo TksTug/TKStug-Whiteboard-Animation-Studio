@@ -14,20 +14,18 @@ class ArtisticSketchEngine:
     def get_artwork_paths(self, art_id: str) -> tuple[str, str]:
         """Returns (color_path, sketch_path) for an artwork ID or custom file path"""
         if os.path.isabs(art_id) and os.path.exists(art_id):
-            # Custom image uploaded by user
             base_no_ext = os.path.splitext(art_id)[0]
             sketch_p = f"{base_no_ext}_sketch.png"
             if not os.path.exists(sketch_p):
                 self.generate_sketch_for_file(art_id, sketch_p)
             return art_id, sketch_p
         
-        # Preset from assets
         color_p = os.path.join(self.artworks_dir, f"{art_id}.png")
         sketch_p = os.path.join(self.artworks_dir, f"{art_id}_sketch.png")
         
         if not os.path.exists(color_p):
-            color_p = os.path.join(self.artworks_dir, "art_growth_nature.png")
-            sketch_p = os.path.join(self.artworks_dir, "art_growth_nature_sketch.png")
+            color_p = os.path.join(self.artworks_dir, "art_vn_quang_trung.png")
+            sketch_p = os.path.join(self.artworks_dir, "art_vn_quang_trung_sketch.png")
             
         return color_p, sketch_p
 
@@ -38,10 +36,12 @@ class ArtisticSketchEngine:
             img_np = np.array(pil_img)
             gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
             inv_gray = 255 - gray
-            blurred = cv2.GaussianBlur(inv_gray, (21, 21), 0)
+            blurred = cv2.GaussianBlur(inv_gray, (15, 15), 0)
             sketch = cv2.divide(gray, 255 - blurred, scale=256.0)
-            edges = cv2.Canny(gray, 40, 120)
-            edges_inv = 255 - edges
+            edges1 = cv2.Canny(gray, 20, 80)
+            edges2 = cv2.Canny(gray, 70, 160)
+            combined_edges = cv2.bitwise_or(edges1, edges2)
+            edges_inv = 255 - combined_edges
             sketch_combined = cv2.min(sketch, edges_inv)
             sketch_rgb = cv2.cvtColor(sketch_combined, cv2.COLOR_GRAY2RGB)
             Image.fromarray(sketch_rgb).save(save_sketch_path)
@@ -57,14 +57,16 @@ class ArtisticSketchEngine:
         sub_text: str = "",
         font: ImageFont.ImageFont = None,
         hand_img: Image.Image = None,
-        theme: str = "whiteboard"
+        theme: str = "vintage",
+        is_static: bool = False
     ) -> Image.Image:
         """
         Renders Model 1:
-        - Phase 1 (0.00 -> 0.45): Fine Pencil Sketching
-        - Phase 2 (0.45 -> 0.75): Watercolor & Vivid Color Inking Wash
-        - Phase 3 (0.75 -> 0.85): Smooth Hand Retreat
-        - Phase 4 (0.85 -> 1.00): Cinematic Parallax / Ken Burns Display with Word-highlighted Subtitles
+        - If is_static: displays the completed color artwork with subtitle.
+        - Phase 1 (0.00 -> 0.45): Fine Pencil Sketching with hand drawing
+        - Phase 2 (0.45 -> 0.75): Watercolor inking wash
+        - Phase 3 (0.75 -> 0.85): Smooth hand retreat
+        - Phase 4 (0.85 -> 1.00): Cinematic Parallax / Ken Burns Display with Word Subtitles
         """
         color_p, sketch_p = self.get_artwork_paths(art_id)
         
@@ -83,43 +85,49 @@ class ArtisticSketchEngine:
             base_bg = np.full((height, width, 3), 255.0, dtype=np.float32)
         elif theme == "vintage":
             base_bg = np.zeros((height, width, 3), dtype=np.float32)
-            base_bg[:, :] = [254.0, 243.0, 199.0]
+            base_bg[:, :] = [250.0, 240.0, 215.0]
         else:
             base_bg = np.zeros((height, width, 3), dtype=np.float32)
             base_bg[:, :] = [30.0, 41.0, 59.0]
 
-        # Phase 1: Sketch Progression (0.00 to 0.45)
+        if is_static:
+            frame_pil = Image.fromarray(np.clip(color_img, 0, 255).astype(np.uint8))
+            if sub_text:
+                self._render_dynamic_subtitles(frame_pil, sub_text, 1.0, width, height, font, theme)
+            return frame_pil
+
+        # Active hand coordinates & frame composition
         active_hand_pos = None
         y_indices, x_indices = np.indices((height, width))
-        diag_dist = (x_indices / width * 0.7 + y_indices / height * 0.3)
+        diag_dist = (x_indices / width * 0.65 + y_indices / height * 0.35)
 
         if progress < 0.45:
-            # Pencil drawing phase
+            # Pencil drawing phase (0.00 to 0.45)
             p1_ratio = progress / 0.45
-            mask_sketch = np.clip((p1_ratio * 1.2 - diag_dist) * 5.0, 0.0, 1.0)
+            mask_sketch = np.clip((p1_ratio * 1.3 - diag_dist) * 4.5, 0.0, 1.0)
             mask_sketch_3d = np.repeat(mask_sketch[:, :, np.newaxis], 3, axis=2)
             current_frame_np = (1.0 - mask_sketch_3d) * base_bg + mask_sketch_3d * sketch_img
             
             # Active drawing hand position
-            sweep_x = int(p1_ratio * width * 0.95 + 20)
-            sweep_y = int(p1_ratio * height * 0.75 + 50)
-            wobble_x = int(math.sin(progress * 50) * 15)
-            wobble_y = int(math.cos(progress * 60) * 12)
-            active_hand_pos = (min(max(sweep_x + wobble_x, 50), width - 50), min(max(sweep_y + wobble_y, 50), height - 50))
+            sweep_x = int(p1_ratio * width * 0.85 + 40)
+            sweep_y = int(p1_ratio * height * 0.70 + 80)
+            wobble_x = int(math.sin(progress * 45) * 18)
+            wobble_y = int(math.cos(progress * 55) * 14)
+            active_hand_pos = (min(max(sweep_x + wobble_x, 60), width - 60), min(max(sweep_y + wobble_y, 80), height - 80))
 
         elif 0.45 <= progress < 0.75:
-            # Watercolor inking wash phase (colorizes the sketch)
+            # Watercolor inking wash phase (0.45 to 0.75)
             p2_ratio = (progress - 0.45) / 0.30
-            mask_color = np.clip((p2_ratio * 1.25 - diag_dist) * 4.0, 0.0, 1.0)
+            mask_color = np.clip((p2_ratio * 1.35 - diag_dist) * 3.8, 0.0, 1.0)
             mask_color_3d = np.repeat(mask_color[:, :, np.newaxis], 3, axis=2)
             current_frame_np = (1.0 - mask_color_3d) * sketch_img + mask_color_3d * color_img
 
             # Active inking brush hand position
-            sweep_x = int(p2_ratio * width * 0.95 + 20)
-            sweep_y = int(p2_ratio * height * 0.85 + 40)
-            brush_wobble_x = int(math.sin(progress * 35) * 25)
-            brush_wobble_y = int(math.cos(progress * 40) * 20)
-            active_hand_pos = (min(max(sweep_x + brush_wobble_x, 50), width - 50), min(max(sweep_y + brush_wobble_y, 50), height - 50))
+            sweep_x = int(p2_ratio * width * 0.88 + 30)
+            sweep_y = int(p2_ratio * height * 0.78 + 60)
+            brush_wobble_x = int(math.sin(progress * 30) * 28)
+            brush_wobble_y = int(math.cos(progress * 35) * 22)
+            active_hand_pos = (min(max(sweep_x + brush_wobble_x, 60), width - 60), min(max(sweep_y + brush_wobble_y, 80), height - 80))
 
         else:
             # Full color completed (0.75 to 1.00)
@@ -129,7 +137,7 @@ class ArtisticSketchEngine:
 
         # Phase 4: Cinematic Parallax / Ken Burns Zoom (0.85 to 1.00)
         if progress >= 0.85:
-            zoom_factor = 1.0 + ((progress - 0.85) / 0.15) * 0.05  # 1.0 to 1.05x subtle cinematic zoom
+            zoom_factor = 1.0 + ((progress - 0.85) / 0.15) * 0.05
             crop_w = int(width / zoom_factor)
             crop_h = int(height / zoom_factor)
             cx, cy = width // 2, height // 2
@@ -150,8 +158,8 @@ class ArtisticSketchEngine:
                 frame_pil.paste(hand_resized, (hx, hy), hand_resized)
             elif 0.75 <= progress < 0.85 and active_hand_pos:
                 retreat = (progress - 0.75) / 0.10
-                hx = int(active_hand_pos[0] - tip_x + retreat * (width * 0.4))
-                hy = int(active_hand_pos[1] - tip_y + retreat * (height * 0.4))
+                hx = int(active_hand_pos[0] - tip_x + retreat * (width * 0.45))
+                hy = int(active_hand_pos[1] - tip_y + retreat * (height * 0.45))
                 frame_pil.paste(hand_resized, (hx, hy), hand_resized)
 
         # Render Modern Word-by-Word Highlighted Subtitle Card
@@ -201,7 +209,6 @@ class ArtisticSketchEngine:
         total_sub_h = len(lines) * line_h
         sub_y_start = int(height * 0.055)
 
-        # Measure max banner width
         max_line_w = 0
         for l in lines:
             bbox = draw.textbbox((0, 0), l, font=font)
@@ -213,14 +220,13 @@ class ArtisticSketchEngine:
         card_x2 = int((width + max_line_w) / 2 + pad_x)
         card_y2 = int(sub_y_start + total_sub_h + pad_y)
 
-        # Frosted glass card backdrop with dark outline
+        # Frosted glass card backdrop with golden outline
         pill_bg = (15, 23, 42)
-        draw.rounded_rectangle([card_x1, card_y1, card_x2, card_y2], radius=16, fill=pill_bg, outline=(56, 189, 248), width=2)
+        draw.rounded_rectangle([card_x1, card_y1, card_x2, card_y2], radius=16, fill=pill_bg, outline=(234, 179, 8), width=2)
 
         # Active word index according to speech progress
         active_word_idx = int(progress * len(words))
 
-        # Render words with karaoke highlight
         for l_idx, (line_text, word_indices) in enumerate(zip(lines, line_word_indices)):
             line_bbox = draw.textbbox((0, 0), line_text, font=font)
             line_w = line_bbox[2] - line_bbox[0]
