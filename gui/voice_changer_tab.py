@@ -6,7 +6,8 @@ import threading
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QFileDialog, QComboBox, QSlider, QProgressBar, QMessageBox,
-    QGroupBox, QFrame, QSplitter, QTextEdit, QRadioButton, QCheckBox
+    QGroupBox, QFrame, QSplitter, QTextEdit, QRadioButton, QCheckBox,
+    QLineEdit
 )
 from PyQt6.QtCore import Qt, QUrl, pyqtSignal, QObject
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
@@ -27,27 +28,30 @@ class CelebrityVoiceChangerTab(QWidget):
         self.audio_output = QAudioOutput()
         self.player.setAudioOutput(self.audio_output)
         self.audio_output.setVolume(1.0)
+        self.player.positionChanged.connect(self.on_player_position_changed)
+        self.player.durationChanged.connect(self.on_player_duration_changed)
 
         self.signals = VoiceSignals()
         self.signals.progress.connect(self.on_progress)
         self.signals.finished.connect(self.on_finished)
 
         self.setup_ui()
+        self.refresh_model_dropdown()
 
     def setup_ui(self):
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(15, 15, 15, 15)
-        main_layout.setSpacing(12)
+        main_layout.setContentsMargins(15, 12, 15, 12)
+        main_layout.setSpacing(10)
 
         # Header Title
         header_box = QFrame()
         header_box.setStyleSheet("background: #0f172a; border-radius: 8px; border: 1px solid #1e293b; padding: 10px;")
         h_layout = QVBoxLayout(header_box)
-        h_layout.setContentsMargins(8, 8, 8, 8)
+        h_layout.setContentsMargins(8, 6, 8, 6)
         
-        lbl_title = QLabel("🎵 AI COVER STUDIO - ĐỔI GIỌNG BÀI HÁT & NGƯỜI NỔI TIẾNG")
+        lbl_title = QLabel("🎵 RVC v2 AI COVER STUDIO - ĐỔI GIỌNG HÁT NGƯỜI NỔI TIẾNG")
         lbl_title.setStyleSheet("font-size: 16px; font-weight: bold; color: #38bdf8;")
-        lbl_sub = QLabel("Tự động bóc tách Nhạc Beat & Giọng Hát -> Đổi giọng ca sĩ sang Người Nổi Tiếng -> Tự động Mix lại bài hát hoàn chỉnh.")
+        lbl_sub = QLabel("Tự động bóc tách Vocal & Beat -> Chuyển đổi giọng hát sang Sơn Tùng, Độ Mixi, Tào Tháo... qua mô hình RVC -> Hòa âm Studio 320kbps.")
         lbl_sub.setStyleSheet("font-size: 12px; color: #94a3b8;")
         h_layout.addWidget(lbl_title)
         h_layout.addWidget(lbl_sub)
@@ -59,17 +63,17 @@ class CelebrityVoiceChangerTab(QWidget):
         m_layout = QHBoxLayout(mode_box)
         m_layout.setContentsMargins(8, 4, 8, 4)
 
-        lbl_mode = QLabel("Chế Độ Xử Lý:")
-        lbl_mode.setStyleSheet("font-weight: bold; color: #f8fafc;")
+        lbl_mode = QLabel("Chế Độ:")
+        lbl_mode.setStyleSheet("font-weight: bold; color: #f8fafc; font-size: 13px;")
         m_layout.addWidget(lbl_mode)
 
-        self.rb_mode_song = QRadioButton("🎵 1. Đổi Giọng Bài Hát Đầy Đủ (Tự Tách Beat + Đổi Giọng Ca Sĩ + Mix Lại)")
+        self.rb_mode_song = QRadioButton("🎵 1. RVC AI Cover Bài Hát (Tự Tách Beat + Đổi Giọng Ca Sĩ + Mix Lại)")
         self.rb_mode_song.setChecked(True)
         self.rb_mode_song.setStyleSheet("color: #38bdf8; font-weight: bold; font-size: 13px;")
         self.rb_mode_song.toggled.connect(self.on_mode_toggled)
         m_layout.addWidget(self.rb_mode_song)
 
-        self.rb_mode_text = QRadioButton("✍️ 2. Tạo Giọng Đọc & Hát AI Trực Tiếp Từ Lời Bài Hát / Kịch Bản")
+        self.rb_mode_text = QRadioButton("✍️ 2. Tạo Giọng Đọc & Lồng Tiếng AI (Text-To-Speech)")
         self.rb_mode_text.setStyleSheet("color: #a78bfa; font-weight: bold; font-size: 13px;")
         self.rb_mode_text.toggled.connect(self.on_mode_toggled)
         m_layout.addWidget(self.rb_mode_text)
@@ -96,316 +100,386 @@ class CelebrityVoiceChangerTab(QWidget):
         sw_layout = QVBoxLayout(self.song_widget)
         sw_layout.setContentsMargins(0, 0, 0, 0)
         
-        self.btn_select_file = QPushButton("📂 Tải Lên File Bài Hát (.mp3, .wav, .m4a)")
+        self.btn_select_file = QPushButton("📂 Tải Lên File Bài Hát Gốc (.mp3, .wav, .m4a, .flac)")
         self.btn_select_file.setStyleSheet("background: #2563eb; color: white; font-weight: bold; padding: 10px 14px; border-radius: 6px; font-size: 13px;")
-        self.btn_select_file.clicked.connect(self.on_select_file)
+        self.btn_select_file.clicked.connect(self.select_audio_file)
         sw_layout.addWidget(self.btn_select_file)
 
-        self.lbl_file_info = QLabel("Chưa chọn file bài hát nào...")
-        self.lbl_file_info.setStyleSheet("color: #cbd5e1; font-size: 11px;")
-        self.lbl_file_info.setWordWrap(True)
-        sw_layout.addWidget(self.lbl_file_info)
-
-        self.btn_play_orig = QPushButton("▶ Nghe Thử Bài Hát Gốc")
-        self.btn_play_orig.setStyleSheet("background: #334155; color: #e2e8f0; padding: 6px; border-radius: 5px;")
-        self.btn_play_orig.setEnabled(False)
-        self.btn_play_orig.clicked.connect(self.on_play_original)
-        sw_layout.addWidget(self.btn_play_orig)
-
-        self.chk_auto_sep = QCheckBox("🎧 Tự động tách riêng Nhạc Beat và Giọng Ca Sĩ (Khuyên dùng)")
-        self.chk_auto_sep.setChecked(True)
-        self.chk_auto_sep.setStyleSheet("color: #10b981; font-weight: bold; margin-top: 4px;")
-        sw_layout.addWidget(self.chk_auto_sep)
+        self.lbl_selected_file = QLabel("Chưa chọn bài hát nào.")
+        self.lbl_selected_file.setStyleSheet("color: #94a3b8; font-size: 12px; font-style: italic; padding: 2px;")
+        self.lbl_selected_file.setWordWrap(True)
+        sw_layout.addWidget(self.lbl_selected_file)
 
         self.ig_layout.addWidget(self.song_widget)
 
         # Text Mode widgets
         self.text_widget = QWidget()
+        self.text_widget.setVisible(False)
         tw_layout = QVBoxLayout(self.text_widget)
         tw_layout.setContentsMargins(0, 0, 0, 0)
         
-        lbl_hint_text = QLabel("Nhập lời bài hát hoặc văn bản bạn muốn Người Nổi Tiếng hát/nói:")
-        lbl_hint_text.setStyleSheet("color: #94a3b8; font-size: 11px;")
-        tw_layout.addWidget(lbl_hint_text)
+        lbl_text_hint = QLabel("Nhập kịch bản hoặc lời bài hát cần AI đọc / hát:")
+        lbl_text_hint.setStyleSheet("color: #cbd5e1; font-size: 12px;")
+        tw_layout.addWidget(lbl_text_hint)
 
-        self.txt_lyrics = QTextEdit()
-        self.txt_lyrics.setPlainText("Ta thà phụ người trong thiên hạ, chứ không để người trong thiên hạ phụ ta! Non sông Đại Việt muôn đời trường tồn!")
-        self.txt_lyrics.setStyleSheet("background: #0f172a; color: white; border: 1px solid #334155; border-radius: 6px; padding: 10px; font-size: 13px;")
-        self.txt_lyrics.setFixedHeight(120)
-        tw_layout.addWidget(self.txt_lyrics)
-        self.text_widget.setVisible(False)
+        self.txt_script = QTextEdit()
+        self.txt_script.setPlaceholderText("Ví dụ: Kẻ thắng làm vua, kẻ thua làm giặc. Ta thà phụ người trong thiên hạ chứ không để người thiên hạ phụ ta...")
+        self.txt_script.setStyleSheet("background: #1e293b; color: #f8fafc; border: 1px solid #334155; border-radius: 6px; padding: 8px; font-size: 13px;")
+        self.txt_script.setMinimumHeight(100)
+        tw_layout.addWidget(self.txt_script)
+
         self.ig_layout.addWidget(self.text_widget)
-
         left_layout.addWidget(self.input_grp)
 
-        # 2. Mixing Controls Group
-        self.mix_grp = QGroupBox("2. Tinh Chỉnh Âm Lượng Hòa Âm (Studio Mixer)")
-        self.mix_grp.setStyleSheet("QGroupBox { font-weight: bold; color: #f8fafc; border: 1px solid #334155; border-radius: 8px; margin-top: 10px; padding-top: 15px; }")
-        mg_layout = QVBoxLayout(self.mix_grp)
+        # 2. Character / Model Selection Group
+        self.char_grp = QGroupBox("2. Chọn Model Giọng Nhân Vật RVC")
+        self.char_grp.setStyleSheet("QGroupBox { font-weight: bold; color: #f8fafc; border: 1px solid #334155; border-radius: 8px; margin-top: 10px; padding-top: 15px; }")
+        cg_layout = QVBoxLayout(self.char_grp)
 
-        # Pitch Shift
-        lbl_pitch_title = QLabel("Tông Giọng (Pitch Shift):")
-        lbl_pitch_title.setStyleSheet("color: #cbd5e1; font-size: 12px;")
-        mg_layout.addWidget(lbl_pitch_title)
+        # Dropdown and Add custom model button
+        combo_h = QHBoxLayout()
+        self.cb_character = QComboBox()
+        self.cb_character.setStyleSheet("background: #1e293b; color: #f8fafc; font-weight: bold; padding: 8px; border-radius: 6px; border: 1px solid #334155; font-size: 13px;")
+        self.cb_character.currentIndexChanged.connect(self.on_character_changed)
+        combo_h.addWidget(self.cb_character, 3)
 
-        pitch_row = QHBoxLayout()
-        self.slider_pitch = QSlider(Qt.Orientation.Horizontal)
-        self.slider_pitch.setRange(-12, 12)
-        self.slider_pitch.setValue(0)
-        self.slider_pitch.valueChanged.connect(self.on_pitch_changed)
-        
-        self.lbl_pitch_val = QLabel("0 (Tự động tối ưu)")
-        self.lbl_pitch_val.setStyleSheet("color: #38bdf8; font-weight: bold; min-width: 140px;")
-        pitch_row.addWidget(self.slider_pitch)
-        pitch_row.addWidget(self.lbl_pitch_val)
-        mg_layout.addLayout(pitch_row)
+        self.btn_import_model = QPushButton("➕ Thêm Model RVC")
+        self.btn_import_model.setStyleSheet("background: #059669; color: white; font-weight: bold; padding: 8px 12px; border-radius: 6px; font-size: 12px;")
+        self.btn_import_model.setToolTip("Nạp thêm file model .pth, .index hoặc .zip tải từ cộng đồng")
+        self.btn_import_model.clicked.connect(self.import_custom_rvc_model)
+        combo_h.addWidget(self.btn_import_model, 1)
+        cg_layout.addLayout(combo_h)
 
-        # Vocal Vol
-        lbl_vocal_vol = QLabel("Âm Lượng Giọng Hát AI:")
-        lbl_vocal_vol.setStyleSheet("color: #cbd5e1; font-size: 12px; margin-top: 6px;")
-        mg_layout.addWidget(lbl_vocal_vol)
+        # Model Info display
+        self.lbl_char_desc = QLabel()
+        self.lbl_char_desc.setStyleSheet("background: #1e293b; color: #38bdf8; padding: 8px; border-radius: 6px; font-size: 12px; border: 1px solid #334155;")
+        self.lbl_char_desc.setWordWrap(True)
+        cg_layout.addWidget(self.lbl_char_desc)
 
-        vvol_row = QHBoxLayout()
-        self.slider_vocal_vol = QSlider(Qt.Orientation.Horizontal)
-        self.slider_vocal_vol.setRange(50, 200)
-        self.slider_vocal_vol.setValue(110)
-        self.slider_vocal_vol.valueChanged.connect(lambda v: self.lbl_vocal_vol_val.setText(f"{v}%"))
+        left_layout.addWidget(self.char_grp)
 
-        self.lbl_vocal_vol_val = QLabel("110%")
-        self.lbl_vocal_vol_val.setStyleSheet("color: #38bdf8; font-weight: bold; min-width: 45px;")
-        vvol_row.addWidget(self.slider_vocal_vol)
-        vvol_row.addWidget(self.lbl_vocal_vol_val)
-        mg_layout.addLayout(vvol_row)
+        # 3. Action Button
+        self.btn_process = QPushButton("🚀 BẮT ĐẦU TẠO AI COVER (RVC)")
+        self.btn_process.setStyleSheet("background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #2563eb, stop:1 #7c3aed); color: white; font-weight: bold; font-size: 14px; padding: 12px; border-radius: 8px;")
+        self.btn_process.clicked.connect(self.start_processing)
+        left_layout.addWidget(self.btn_process)
 
-        # Beat Vol
-        lbl_beat_vol = QLabel("Âm Lượng Nhạc Nền Beat:")
-        lbl_beat_vol.setStyleSheet("color: #cbd5e1; font-size: 12px; margin-top: 6px;")
-        mg_layout.addWidget(lbl_beat_vol)
+        self.pbar = QProgressBar()
+        self.pbar.setValue(0)
+        self.pbar.setTextVisible(True)
+        self.pbar.setStyleSheet("QProgressBar { background: #1e293b; border-radius: 6px; text-align: center; color: white; font-weight: bold; height: 20px; } QProgressBar::chunk { background: #38bdf8; border-radius: 6px; }")
+        left_layout.addWidget(self.pbar)
 
-        bvol_row = QHBoxLayout()
-        self.slider_beat_vol = QSlider(Qt.Orientation.Horizontal)
-        self.slider_beat_vol.setRange(30, 150)
-        self.slider_beat_vol.setValue(100)
-        self.slider_beat_vol.valueChanged.connect(lambda v: self.lbl_beat_vol_val.setText(f"{v}%"))
+        self.lbl_status = QLabel("Sẵn sàng.")
+        self.lbl_status.setStyleSheet("color: #94a3b8; font-size: 12px; font-weight: bold;")
+        left_layout.addWidget(self.lbl_status)
 
-        self.lbl_beat_vol_val = QLabel("100%")
-        self.lbl_beat_vol_val.setStyleSheet("color: #38bdf8; font-weight: bold; min-width: 45px;")
-        bvol_row.addWidget(self.slider_beat_vol)
-        bvol_row.addWidget(self.lbl_beat_vol_val)
-        mg_layout.addLayout(bvol_row)
-
-        left_layout.addWidget(self.mix_grp)
         left_layout.addStretch()
         splitter.addWidget(left_widget)
 
-        # --- RIGHT PANEL ---
+        # --- RIGHT PANEL (Tuning & Studio Controls) ---
         right_widget = QWidget()
         right_layout = QVBoxLayout(right_widget)
         right_layout.setContentsMargins(5, 0, 0, 0)
         right_layout.setSpacing(10)
 
-        # 3. Celebrity Voice Preset Selector Group
-        voice_grp = QGroupBox("3. Chọn Người Nổi Tiếng Mục Tiêu")
-        voice_grp.setStyleSheet("QGroupBox { font-weight: bold; color: #f8fafc; border: 1px solid #334155; border-radius: 8px; margin-top: 10px; padding-top: 15px; }")
-        vg_layout = QVBoxLayout(voice_grp)
+        # Pro Studio Tuning Group
+        self.tune_grp = QGroupBox("⚙️ Tùy Chỉnh Tone & Hòa Âm (RVC Studio Tuning)")
+        self.tune_grp.setStyleSheet("QGroupBox { font-weight: bold; color: #f8fafc; border: 1px solid #334155; border-radius: 8px; margin-top: 10px; padding-top: 15px; }")
+        tg_layout = QVBoxLayout(self.tune_grp)
+        tg_layout.setSpacing(8)
 
-        self.cb_celebrity = QComboBox()
-        self.cb_celebrity.setStyleSheet("background: #1e293b; color: white; padding: 8px; border: 1px solid #475569; border-radius: 6px; font-size: 13px;")
-        for p in self.engine.celebrity_presets:
-            self.cb_celebrity.addItem(f"{p['name']} ({p['category']})", p['id'])
-        self.cb_celebrity.currentIndexChanged.connect(self.on_celebrity_changed)
-        vg_layout.addWidget(self.cb_celebrity)
+        # Pitch Transpose
+        h_pitch_lbl = QHBoxLayout()
+        lbl_p = QLabel("Đổi Tone / Key (Pitch Shift):")
+        lbl_p.setStyleSheet("color: #f8fafc; font-size: 12px;")
+        self.lbl_pitch_val = QLabel("0 bán âm")
+        self.lbl_pitch_val.setStyleSheet("color: #38bdf8; font-weight: bold; font-size: 12px;")
+        h_pitch_lbl.addWidget(lbl_p)
+        h_pitch_lbl.addWidget(self.lbl_pitch_val)
+        tg_layout.addLayout(h_pitch_lbl)
 
-        self.lbl_celeb_desc = QLabel(self.engine.celebrity_presets[0]["desc"])
-        self.lbl_celeb_desc.setStyleSheet("background: #0f172a; color: #a5f3fc; border-radius: 6px; padding: 10px; font-size: 11px;")
-        self.lbl_celeb_desc.setWordWrap(True)
-        vg_layout.addWidget(self.lbl_celeb_desc)
+        self.slider_pitch = QSlider(Qt.Orientation.Horizontal)
+        self.slider_pitch.setRange(-24, 24)
+        self.slider_pitch.setValue(0)
+        self.slider_pitch.valueChanged.connect(self.on_pitch_slider_changed)
+        tg_layout.addWidget(self.slider_pitch)
 
-        right_layout.addWidget(voice_grp)
+        # Quick Key buttons
+        quick_key_layout = QHBoxLayout()
+        btn_female_to_male = QPushButton("Nữ ➔ Nam (-12)")
+        btn_female_to_male.setStyleSheet("background: #334155; color: #cbd5e1; font-size: 11px; padding: 4px 8px; border-radius: 4px;")
+        btn_female_to_male.clicked.connect(lambda: self.slider_pitch.setValue(-12))
+        quick_key_layout.addWidget(btn_female_to_male)
 
-        # 4. Action & Output Card Group
-        action_grp = QGroupBox("4. Xử Lý Tự Động & Xuất Bản")
-        action_grp.setStyleSheet("QGroupBox { font-weight: bold; color: #f8fafc; border: 1px solid #334155; border-radius: 8px; margin-top: 10px; padding-top: 15px; }")
-        ag_layout = QVBoxLayout(action_grp)
+        btn_same_gender = QPushButton("Cùng Giới (0)")
+        btn_same_gender.setStyleSheet("background: #334155; color: #cbd5e1; font-size: 11px; padding: 4px 8px; border-radius: 4px;")
+        btn_same_gender.clicked.connect(lambda: self.slider_pitch.setValue(0))
+        quick_key_layout.addWidget(btn_same_gender)
 
-        self.btn_convert = QPushButton("🚀 BẮT ĐẦU ĐỔI GIỌNG BÀI HÁT (AI COVER FULL)")
-        self.btn_convert.setStyleSheet("background: #f59e0b; color: #000; font-weight: bold; font-size: 14px; padding: 12px; border-radius: 8px;")
-        self.btn_convert.clicked.connect(self.on_start_conversion)
-        ag_layout.addWidget(self.btn_convert)
+        btn_male_to_female = QPushButton("Nam ➔ Nữ (+12)")
+        btn_male_to_female.setStyleSheet("background: #334155; color: #cbd5e1; font-size: 11px; padding: 4px 8px; border-radius: 4px;")
+        btn_male_to_female.clicked.connect(lambda: self.slider_pitch.setValue(12))
+        quick_key_layout.addWidget(btn_male_to_female)
+        tg_layout.addLayout(quick_key_layout)
 
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setRange(0, 100)
-        self.progress_bar.setValue(0)
-        self.progress_bar.setStyleSheet("QProgressBar { background: #1e293b; border-radius: 6px; text-align: center; color: white; } QProgressBar::chunk { background: #38bdf8; border-radius: 6px; }")
-        ag_layout.addWidget(self.progress_bar)
+        # Pitch Algorithm selector
+        h_algo = QHBoxLayout()
+        lbl_algo = QLabel("Thuật toán Pitch:")
+        lbl_algo.setStyleSheet("color: #f8fafc; font-size: 12px;")
+        self.cb_pitch_algo = QComboBox()
+        self.cb_pitch_algo.addItems(["RMVPE (Chuẩn nhất - Không lạc giọng)", "PM (Nhanh)", "Harvest (Chi tiết)", "Crepe (Mượt)"])
+        self.cb_pitch_algo.setStyleSheet("background: #1e293b; color: #38bdf8; padding: 4px 8px; border-radius: 4px; border: 1px solid #334155; font-size: 12px;")
+        h_algo.addWidget(lbl_algo)
+        h_algo.addWidget(self.cb_pitch_algo)
+        tg_layout.addLayout(h_algo)
 
-        self.lbl_status = QLabel("Sẵn sàng đổi giọng...")
-        self.lbl_status.setStyleSheet("color: #94a3b8; font-size: 11px;")
-        ag_layout.addWidget(self.lbl_status)
+        # Index Feature Rate
+        h_index_lbl = QHBoxLayout()
+        lbl_idx = QLabel("Tỷ lệ đặc trưng giọng (Index Rate):")
+        lbl_idx.setStyleSheet("color: #f8fafc; font-size: 12px;")
+        self.lbl_index_val = QLabel("0.80")
+        self.lbl_index_val.setStyleSheet("color: #38bdf8; font-weight: bold; font-size: 12px;")
+        h_index_lbl.addWidget(lbl_idx)
+        h_index_lbl.addWidget(self.lbl_index_val)
+        tg_layout.addLayout(h_index_lbl)
 
-        out_player_row = QHBoxLayout()
-        self.btn_play_out = QPushButton("▶ Nghe Thử Bản AI Cover")
-        self.btn_play_out.setStyleSheet("background: #10b981; color: white; font-weight: bold; padding: 10px 16px; border-radius: 6px; font-size: 13px;")
-        self.btn_play_out.setEnabled(False)
-        self.btn_play_out.clicked.connect(self.on_play_output)
-        out_player_row.addWidget(self.btn_play_out)
+        self.slider_index = QSlider(Qt.Orientation.Horizontal)
+        self.slider_index.setRange(0, 100)
+        self.slider_index.setValue(80)
+        self.slider_index.valueChanged.connect(lambda v: self.lbl_index_val.setText(f"{v/100.0:.2f}"))
+        tg_layout.addWidget(self.slider_index)
 
-        self.btn_save_mp3 = QPushButton("💾 Lưu Bài Hát MP3 320kbps")
-        self.btn_save_mp3.setStyleSheet("background: #0284c7; color: white; font-weight: bold; padding: 10px 16px; border-radius: 6px; font-size: 13px;")
-        self.btn_save_mp3.setEnabled(False)
-        self.btn_save_mp3.clicked.connect(self.on_save_output)
-        out_player_row.addWidget(self.btn_save_mp3)
+        # Volume Controls
+        h_vocal_lbl = QHBoxLayout()
+        lbl_v = QLabel("Âm Lượng Giọng Hát AI (Vocal):")
+        lbl_v.setStyleSheet("color: #f8fafc; font-size: 12px;")
+        self.lbl_vocal_val = QLabel("100%")
+        self.lbl_vocal_val.setStyleSheet("color: #38bdf8; font-weight: bold; font-size: 12px;")
+        h_vocal_lbl.addWidget(lbl_v)
+        h_vocal_lbl.addWidget(self.lbl_vocal_val)
+        tg_layout.addLayout(h_vocal_lbl)
 
-        ag_layout.addLayout(out_player_row)
+        self.slider_vocal = QSlider(Qt.Orientation.Horizontal)
+        self.slider_vocal.setRange(0, 200)
+        self.slider_vocal.setValue(100)
+        self.slider_vocal.valueChanged.connect(lambda v: self.lbl_vocal_val.setText(f"{v}%"))
+        tg_layout.addWidget(self.slider_vocal)
 
-        right_layout.addWidget(action_grp)
+        h_beat_lbl = QHBoxLayout()
+        lbl_b = QLabel("Âm Lượng Nhạc Nền (Beat):")
+        lbl_b.setStyleSheet("color: #f8fafc; font-size: 12px;")
+        self.lbl_beat_val = QLabel("100%")
+        self.lbl_beat_val.setStyleSheet("color: #38bdf8; font-weight: bold; font-size: 12px;")
+        h_beat_lbl.addWidget(lbl_b)
+        h_beat_lbl.addWidget(self.lbl_beat_val)
+        tg_layout.addLayout(h_beat_lbl)
+
+        self.slider_beat = QSlider(Qt.Orientation.Horizontal)
+        self.slider_beat.setRange(0, 200)
+        self.slider_beat.setValue(100)
+        self.slider_beat.valueChanged.connect(lambda v: self.lbl_beat_val.setText(f"{v}%"))
+        tg_layout.addWidget(self.slider_beat)
+
+        right_layout.addWidget(self.tune_grp)
+
+        # Audio Output Player Group
+        self.player_grp = QGroupBox("🎧 Nghe Thử & Xuất File Hoàn Chỉnh")
+        self.player_grp.setStyleSheet("QGroupBox { font-weight: bold; color: #f8fafc; border: 1px solid #334155; border-radius: 8px; margin-top: 10px; padding-top: 15px; }")
+        pg_layout = QVBoxLayout(self.player_grp)
+
+        self.lbl_now_playing = QLabel("Chưa có bản ghi nào được tạo.")
+        self.lbl_now_playing.setStyleSheet("color: #94a3b8; font-size: 12px;")
+        self.lbl_now_playing.setWordWrap(True)
+        pg_layout.addWidget(self.lbl_now_playing)
+
+        # Player transport bar
+        player_bar = QHBoxLayout()
+        self.btn_play_pause = QPushButton("▶ Phát Nhạc")
+        self.btn_play_pause.setStyleSheet("background: #059669; color: white; font-weight: bold; padding: 8px 16px; border-radius: 6px;")
+        self.btn_play_pause.clicked.connect(self.toggle_play_pause)
+        self.btn_play_pause.setEnabled(False)
+        player_bar.addWidget(self.btn_play_pause)
+
+        self.btn_open_folder = QPushButton("📂 Mở Thư Mục")
+        self.btn_open_folder.setStyleSheet("background: #334155; color: #f8fafc; padding: 8px 12px; border-radius: 6px;")
+        self.btn_open_folder.clicked.connect(self.open_output_folder)
+        self.btn_open_folder.setEnabled(False)
+        player_bar.addWidget(self.btn_open_folder)
+        pg_layout.addLayout(player_bar)
+
+        self.seek_slider = QSlider(Qt.Orientation.Horizontal)
+        self.seek_slider.setRange(0, 100)
+        self.seek_slider.sliderMoved.connect(self.set_player_position)
+        pg_layout.addWidget(self.seek_slider)
+
+        right_layout.addWidget(self.player_grp)
         right_layout.addStretch()
-
         splitter.addWidget(right_widget)
+
+        splitter.setStretchFactor(0, 5)
+        splitter.setStretchFactor(1, 5)
         main_layout.addWidget(splitter)
 
+    def refresh_model_dropdown(self):
+        self.cb_character.clear()
+        all_presets = self.engine.celebrity_presets + self.engine.scan_custom_models()
+        for p in all_presets:
+            self.cb_character.addItem(p["name"], p["id"])
+        self.on_character_changed(0)
+
+    def on_character_changed(self, index):
+        char_id = self.cb_character.currentData()
+        all_presets = self.engine.celebrity_presets + self.engine.scan_custom_models()
+        char = next((p for p in all_presets if p["id"] == char_id), None)
+        if char:
+            self.lbl_char_desc.setText(f"ℹ️ {char.get('desc', '')}")
+            default_shift = char.get("pitch_shift", 0)
+            self.slider_pitch.setValue(default_shift)
+
+    def on_pitch_slider_changed(self, val):
+        sign = "+" if val > 0 else ""
+        self.lbl_pitch_val.setText(f"{sign}{val} bán âm")
+
     def on_mode_toggled(self):
-        is_song_mode = self.rb_mode_song.isChecked()
-        self.song_widget.setVisible(is_song_mode)
-        self.text_widget.setVisible(not is_song_mode)
-        self.mix_grp.setVisible(is_song_mode)
-        if is_song_mode:
-            self.btn_convert.setText("🚀 BẮT ĐẦU ĐỔI GIỌNG BÀI HÁT (AI COVER FULL)")
+        is_song = self.rb_mode_song.isChecked()
+        self.song_widget.setVisible(is_song)
+        self.text_widget.setVisible(not is_song)
+        self.tune_grp.setVisible(is_song)
+        if is_song:
+            self.btn_process.setText("🚀 BẮT ĐẦU TẠO AI COVER (RVC)")
         else:
-            self.btn_convert.setText("🎙️ TẠO GIỌNG ĐỌC & HÁT AI NGƯỜI NỔI TIẾNG NGAY")
+            self.btn_process.setText("🎙️ TẠO GIỌNG ĐỌC & LỒNG TIẾNG AI")
 
-    def on_select_file(self):
-        fpath, _ = QFileDialog.getOpenFileName(
-            self,
-            "Chọn File Bài Hát / Âm Thanh",
-            os.path.expanduser("~"),
-            "Audio Files (*.mp3 *.wav *.m4a *.flac *.ogg)"
+    def select_audio_file(self):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Chọn File Bài Hát Gốc", "", "Audio Files (*.mp3 *.wav *.m4a *.flac *.ogg)"
         )
-        if fpath:
-            self.input_file_path = fpath
-            info = self.engine.get_audio_info(fpath)
-            dur_str = f"{int(info['duration'] // 60)}m {int(info['duration'] % 60)}s"
-            fname = os.path.basename(fpath)
-            self.lbl_file_info.setText(f"📁 {fname}\n⏱ Thời lượng: {dur_str}")
-            self.btn_play_orig.setEnabled(True)
-            self.lbl_status.setText("Đã nạp file bài hát thành công.")
+        if file_path:
+            self.input_file_path = file_path
+            self.lbl_selected_file.setText(f"🎵 {os.path.basename(file_path)}")
+            self.lbl_status.setText(f"Đã chọn: {os.path.basename(file_path)}")
 
-    def on_play_original(self):
-        if self.input_file_path and os.path.exists(self.input_file_path):
-            if self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
-                self.player.pause()
-                self.btn_play_orig.setText("▶ Nghe Thử Bài Hát Gốc")
-            else:
-                self.player.setSource(QUrl.fromLocalFile(self.input_file_path))
-                self.player.play()
-                self.btn_play_orig.setText("⏸ Tạm Dừng")
-
-    def on_pitch_changed(self, val: int):
-        if val > 0:
-            self.lbl_pitch_val.setText(f"+{val} (Tăng cao)")
-        elif val < 0:
-            self.lbl_pitch_val.setText(f"{val} (Trầm sâu)")
-        else:
-            self.lbl_pitch_val.setText("0 (Tự động tối ưu)")
-
-    def on_celebrity_changed(self, idx: int):
-        if 0 <= idx < len(self.engine.celebrity_presets):
-            preset = self.engine.celebrity_presets[idx]
-            self.lbl_celeb_desc.setText(preset.get("desc", ""))
-
-    def on_start_conversion(self):
-        celebrity_id = self.cb_celebrity.currentData()
-        is_song_mode = self.rb_mode_song.isChecked()
-
-        if is_song_mode:
-            if not self.input_file_path or not os.path.exists(self.input_file_path):
-                QMessageBox.warning(self, "Chưa Chọn Bài Hát", "Vui lòng bấm 'Tải Lên File Bài Hát' trước!")
-                return
-        else:
-            lyrics_text = self.txt_lyrics.toPlainText().strip()
-            if not lyrics_text:
-                QMessageBox.warning(self, "Chưa Nhập Văn Bản", "Vui lòng nhập lời bài hát hoặc câu nói cần phát âm!")
-                return
-
-        temp_out = os.path.join(self.engine.temp_dir, f"ai_cover_result_{uuid.uuid4().hex[:6]}.mp3")
-
-        self.btn_convert.setEnabled(False)
-        self.progress_bar.setValue(0)
-
-        def run():
+    def import_custom_rvc_model(self):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Chọn File Model RVC (.pth, .index hoặc .zip)", "", "RVC Models (*.pth *.index *.zip)"
+        )
+        if file_path:
             try:
-                def p_cb(pct, text):
-                    self.signals.progress.emit(pct, text)
-
-                if is_song_mode:
-                    pitch_val = self.slider_pitch.value()
-                    vocal_vol = self.slider_vocal_vol.value() / 100.0
-                    beat_vol = self.slider_beat_vol.value() / 100.0
-                    auto_sep = self.chk_auto_sep.isChecked()
-                    ok = self.engine.convert_song_ai_cover(
-                        input_audio_path=self.input_file_path,
-                        celebrity_id=celebrity_id,
-                        output_path=temp_out,
-                        pitch_semitones=pitch_val,
-                        vocal_volume=vocal_vol,
-                        beat_volume=beat_vol,
-                        auto_separate_beat=auto_sep,
-                        progress_callback=p_cb
-                    )
-                else:
-                    lyrics_text = self.txt_lyrics.toPlainText().strip()
-                    ok = self.engine.synthesize_celebrity_speech(
-                        text=lyrics_text,
-                        celebrity_id=celebrity_id,
-                        output_path=temp_out,
-                        progress_callback=p_cb
-                    )
-
-                self.signals.finished.emit(ok, temp_out)
+                msg = self.engine.import_model_archive(file_path)
+                QMessageBox.information(self, "Thành Công", msg)
+                self.refresh_model_dropdown()
             except Exception as e:
-                self.signals.finished.emit(False, str(e))
+                QMessageBox.critical(self, "Lỗi Nhập Model", str(e))
 
-        t = threading.Thread(target=run, daemon=True)
-        t.start()
+    def start_processing(self):
+        char_id = self.cb_character.currentData()
+        pitch_shift = self.slider_pitch.value()
+        pitch_algo = self.cb_pitch_algo.currentText().split()[0].lower()
+        index_rate = self.slider_index.value() / 100.0
+        vocal_vol = self.slider_vocal.value() / 100.0
+        beat_vol = self.slider_beat.value() / 100.0
 
-    def on_progress(self, pct: int, text: str):
-        self.progress_bar.setValue(pct)
-        self.lbl_status.setText(text)
+        if self.rb_mode_song.isChecked():
+            if not self.input_file_path or not os.path.exists(self.input_file_path):
+                QMessageBox.warning(self, "Chưa chọn file", "Vui lòng chọn một file bài hát gốc (.mp3, .wav) trước!")
+                return
 
-    def on_finished(self, success: bool, msg: str):
-        self.btn_convert.setEnabled(True)
+            self.btn_process.setEnabled(False)
+            self.pbar.setValue(10)
+            self.lbl_status.setText("Đang khởi động AI Cover Engine...")
 
-        if success:
-            self.output_file_path = msg
-            self.btn_play_out.setEnabled(True)
-            self.btn_save_mp3.setEnabled(True)
-            self.progress_bar.setValue(100)
-            self.lbl_status.setText("🎉 Đã hoàn thành bản AI Cover! Bấm 'Nghe Thử' bên dưới để thưởng thức.")
-            self.on_play_output()
+            def worker():
+                try:
+                    out = self.engine.process_full_ai_cover(
+                        self.input_file_path,
+                        char_id,
+                        pitch_shift=pitch_shift,
+                        pitch_algo=pitch_algo,
+                        index_rate=index_rate,
+                        vocal_vol=vocal_vol,
+                        beat_vol=beat_vol,
+                        progress_callback=lambda p, s: self.signals.progress.emit(p, s)
+                    )
+                    self.signals.finished.emit(True, out)
+                except Exception as e:
+                    self.signals.finished.emit(False, str(e))
+
+            threading.Thread(target=worker, daemon=True).start()
+
         else:
-            self.lbl_status.setText("Có lỗi xảy ra.")
-            QMessageBox.critical(self, "Lỗi Đổi Giọng", f"Không thể xử lý:\n{msg}")
+            script_text = self.txt_script.toPlainText().strip()
+            if not script_text:
+                QMessageBox.warning(self, "Chưa nhập nội dung", "Vui lòng nhập kịch bản hoặc lời cần đọc!")
+                return
 
-    def on_play_output(self):
+            self.btn_process.setEnabled(False)
+            self.pbar.setValue(20)
+            self.lbl_status.setText("Đang tổng hợp giọng nói Neural AI...")
+
+            def worker_text():
+                try:
+                    all_presets = self.engine.celebrity_presets + self.engine.scan_custom_models()
+                    char = next((p for p in all_presets if p["id"] == char_id), all_presets[0])
+                    tts_voice = char.get("tts_voice", "turbo-nam-minh")
+                    
+                    file_id = uuid.uuid4().hex[:8]
+                    out_path = os.path.join(self.engine.temp_dir, f"speech_{char['id']}_{file_id}.mp3")
+                    
+                    self.signals.progress.emit(50, "Đang tạo giọng AI...")
+                    self.engine.tts_engine.generate_speech(script_text, out_path, voice_name=tts_voice)
+                    self.signals.finished.emit(True, out_path)
+                except Exception as e:
+                    self.signals.finished.emit(False, str(e))
+
+            threading.Thread(target=worker_text, daemon=True).start()
+
+    def on_progress(self, percent, msg):
+        self.pbar.setValue(percent)
+        self.lbl_status.setText(msg)
+
+    def on_finished(self, success, result):
+        self.btn_process.setEnabled(True)
+        if success:
+            self.output_file_path = result
+            self.pbar.setValue(100)
+            self.lbl_status.setText("🎉 Đã tạo thành công!")
+            self.lbl_now_playing.setText(f"🎧 Đã tạo: {os.path.basename(result)}")
+            self.btn_play_pause.setEnabled(True)
+            self.btn_open_folder.setEnabled(True)
+            self.player.setSource(QUrl.fromLocalFile(result))
+            self.player.play()
+            self.btn_play_pause.setText("⏸ Tạm Dừng")
+            QMessageBox.information(self, "Thành Công", f"Đã hoàn thành AI Cover!\nFile lưu tại:\n{result}")
+        else:
+            self.lbl_status.setText("❌ Thất bại.")
+            QMessageBox.critical(self, "Lỗi Xử Lý", f"Không thể xử lý:\n{result}")
+
+    def toggle_play_pause(self):
+        if self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
+            self.player.pause()
+            self.btn_play_pause.setText("▶ Tiếp Tục")
+        else:
+            self.player.play()
+            self.btn_play_pause.setText("⏸ Tạm Dừng")
+
+    def on_player_position_changed(self, pos):
+        dur = self.player.duration()
+        if dur > 0:
+            self.seek_slider.setValue(int(pos * 100 / dur))
+
+    def on_player_duration_changed(self, dur):
+        pass
+
+    def set_player_position(self, slider_val):
+        dur = self.player.duration()
+        if dur > 0:
+            self.player.setPosition(int(slider_val * dur / 100))
+
+    def open_output_folder(self):
         if self.output_file_path and os.path.exists(self.output_file_path):
-            if self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
-                self.player.pause()
-                self.btn_play_out.setText("▶ Nghe Lại Bản AI Cover")
+            folder = os.path.dirname(self.output_file_path)
+            if sys.platform == "win32":
+                os.startfile(folder)
             else:
-                self.player.setSource(QUrl.fromLocalFile(self.output_file_path))
-                self.player.play()
-                self.btn_play_out.setText("⏸ Tạm Dừng")
-
-    def on_save_output(self):
-        if not self.output_file_path or not os.path.exists(self.output_file_path):
-            return
-        
-        save_dest, _ = QFileDialog.getSaveFileName(
-            self,
-            "Lưu File Bài Hát MP3 Đã Đổi Giọng",
-            os.path.join(os.path.expanduser("~"), "Desktop", "Bai_Hat_AI_Cover_Celebrity.mp3"),
-            "MP3 Audio (*.mp3)"
-        )
-        if save_dest:
-            shutil.copy2(self.output_file_path, save_dest)
-            QMessageBox.information(self, "Đã Lưu Thành Công", f"Đã lưu bài hát tại:\n{save_dest}")
+                subprocess.Popen(["xdg-open", folder])
