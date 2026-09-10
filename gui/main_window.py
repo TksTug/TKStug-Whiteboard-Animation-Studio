@@ -9,7 +9,7 @@ from PIL import Image
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTextEdit,
     QPushButton, QComboBox, QSlider, QProgressBar, QListWidget, QListWidgetItem,
-    QFileDialog, QMessageBox, QGroupBox, QSplitter, QCheckBox, QTabWidget
+    QFileDialog, QMessageBox, QGroupBox, QSplitter, QCheckBox
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject, QRectF, QUrl
 from PyQt6.QtGui import QFont, QColor, QPainter, QImage
@@ -22,7 +22,6 @@ from backend.artistic_sketch_engine import ArtisticSketchEngine
 from backend.video_renderer import VideoRenderer
 from backend.ai_art_generator import AIArtGenerator
 from backend.utils import get_asset_path
-from gui.voice_changer_tab import CelebrityVoiceChangerTab
 
 class WorkerSignals(QObject):
     progress = pyqtSignal(int, str)

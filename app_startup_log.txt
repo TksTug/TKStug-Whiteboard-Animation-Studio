@@ -77,3 +77,6 @@ Traceback (most recent call last):
     ^
 SyntaxError: unterminated string literal (detected at line 595)
 
+=== Starting TKStug Whiteboard Studio ===
+Importing PyQt6...
+Importing MainWindow...
