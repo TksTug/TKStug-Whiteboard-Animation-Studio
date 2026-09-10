@@ -8,6 +8,10 @@ from backend.utils import get_asset_path
 class ArtisticSketchEngine:
     def __init__(self):
         self.cached_artworks = {}
+        self.cached_artworks_uint8 = {}
+        self.cached_diag_dist = {}
+        self.cached_base_bg = {}
+        self.cached_pen = {}
         self.artworks_dir = get_asset_path("artworks")
         self.hand_path = get_asset_path(os.path.join("hands", "hand_marker.png"))
 
@@ -48,6 +52,40 @@ class ArtisticSketchEngine:
         except Exception as e:
             print(f"Error creating sketch for custom file: {e}")
 
+    def _get_diag_dist(self, width: int, height: int) -> np.ndarray:
+        dim_key = (width, height)
+        if dim_key not in self.cached_diag_dist:
+            y_indices, x_indices = np.indices((height, width), dtype=np.float32)
+            diag = (x_indices / width * 0.65 + y_indices / height * 0.35)
+            self.cached_diag_dist[dim_key] = diag
+        return self.cached_diag_dist[dim_key]
+
+    def _get_base_bg(self, width: int, height: int, theme: str) -> np.ndarray:
+        bg_key = (width, height, theme)
+        if bg_key not in self.cached_base_bg:
+            if theme == "whiteboard":
+                bg = np.full((height, width, 3), 255.0, dtype=np.float32)
+            elif theme == "vintage":
+                bg = np.zeros((height, width, 3), dtype=np.float32)
+                bg[:, :] = [250.0, 240.0, 215.0]
+            else:
+                bg = np.zeros((height, width, 3), dtype=np.float32)
+                bg[:, :] = [30.0, 41.0, 59.0]
+            self.cached_base_bg[bg_key] = bg
+        return self.cached_base_bg[bg_key]
+
+    def _get_resized_pen(self, hand_img: Image.Image, height: int) -> tuple[Image.Image, int, int]:
+        pen_key = (id(hand_img), height)
+        if pen_key not in self.cached_pen:
+            pen_scale = (height / 1080.0) * 0.65
+            pw = max(int(hand_img.width * pen_scale), 50)
+            ph = max(int(hand_img.height * pen_scale), 50)
+            pen_resized = hand_img.resize((pw, ph), Image.Resampling.LANCZOS)
+            tip_offset_x = int(pw * 0.12)
+            tip_offset_y = int(ph * 0.88)
+            self.cached_pen[pen_key] = (pen_resized, tip_offset_x, tip_offset_y)
+        return self.cached_pen[pen_key]
+
     def render_artistic_frame(
         self,
         art_id: str,
@@ -61,52 +99,41 @@ class ArtisticSketchEngine:
         is_static: bool = False
     ) -> Image.Image:
         """
-        Pure, Unobstructed 4K Cinematic Artwork Display (NO TEXT BLOCKING THE VIEW):
-        - Phase 1 (0.00 -> 0.40): Elegant energetic line-art pencil sketching
+        Ultra-Fast, Pure 4K Cinematic Artwork Display (NO TEXT BLOCKING THE VIEW):
+        - Phase 1 (0.00 -> 0.40): Elegant line-art pencil sketching
         - Phase 2 (0.40 -> 0.75): Rich vibrant color watercolor wash
-        - Phase 3 (0.75 -> 0.85): Smooth hand retreat offscreen
-        - Phase 4 (0.85 -> 1.00): 100% steady, crystal-clear completed artwork with full visual immersion
+        - Phase 3 (0.75 -> 0.85): Smooth stylus pen retreat offscreen
+        - Phase 4 (0.85 -> 1.00): 100% steady, crystal-clear completed artwork
         """
         color_p, sketch_p = self.get_artwork_paths(art_id)
-        
         cache_key = f"{color_p}_{width}_{height}"
-        if cache_key in self.cached_artworks:
-            color_img, sketch_img = self.cached_artworks[cache_key]
-        else:
+        
+        if cache_key not in self.cached_artworks:
             c_raw = Image.open(color_p).convert("RGB").resize((width, height), Image.Resampling.LANCZOS)
             s_raw = Image.open(sketch_p).convert("RGB").resize((width, height), Image.Resampling.LANCZOS)
             color_img = np.array(c_raw, dtype=np.float32)
             sketch_img = np.array(s_raw, dtype=np.float32)
             self.cached_artworks[cache_key] = (color_img, sketch_img)
-
-        # Base background canvas
-        if theme == "whiteboard":
-            base_bg = np.full((height, width, 3), 255.0, dtype=np.float32)
-        elif theme == "vintage":
-            base_bg = np.zeros((height, width, 3), dtype=np.float32)
-            base_bg[:, :] = [250.0, 240.0, 215.0]
+            self.cached_artworks_uint8[cache_key] = c_raw
         else:
-            base_bg = np.zeros((height, width, 3), dtype=np.float32)
-            base_bg[:, :] = [30.0, 41.0, 59.0]
+            color_img, sketch_img = self.cached_artworks[cache_key]
 
-        if is_static:
-            return Image.fromarray(np.clip(color_img, 0, 255).astype(np.uint8))
+        if is_static or progress >= 0.85:
+            return self.cached_artworks_uint8[cache_key].copy()
 
-        # Balanced Pacing Thresholds
+        base_bg = self._get_base_bg(width, height, theme)
+        diag_dist = self._get_diag_dist(width, height)
+
         p1_end = 0.40
         p2_end = 0.75
         p3_end = 0.85
 
         active_hand_pos = None
-        y_indices, x_indices = np.indices((height, width))
-        diag_dist = (x_indices / width * 0.65 + y_indices / height * 0.35)
 
         if progress < p1_end:
-            # Phase 1: Rapid LineArt Sketching
             p1_ratio = progress / p1_end
-            mask_sketch = np.clip((p1_ratio * 1.35 - diag_dist) * 6.0, 0.0, 1.0)
-            mask_sketch_3d = np.repeat(mask_sketch[:, :, np.newaxis], 3, axis=2)
-            current_frame_np = (1.0 - mask_sketch_3d) * base_bg + mask_sketch_3d * sketch_img
+            mask_sketch = np.clip((p1_ratio * 1.35 - diag_dist) * 6.0, 0.0, 1.0)[:, :, None]
+            current_frame_np = (1.0 - mask_sketch) * base_bg + mask_sketch * sketch_img
             
             sweep_x = int(p1_ratio * width * 0.85 + 40)
             sweep_y = int(p1_ratio * height * 0.70 + 80)
@@ -115,11 +142,9 @@ class ArtisticSketchEngine:
             active_hand_pos = (min(max(sweep_x + wobble_x, 60), width - 60), min(max(sweep_y + wobble_y, 80), height - 80))
 
         elif p1_end <= progress < p2_end:
-            # Phase 2: Vibrant Anime Color Wash
             p2_ratio = (progress - p1_end) / (p2_end - p1_end)
-            mask_color = np.clip((p2_ratio * 1.40 - diag_dist) * 5.0, 0.0, 1.0)
-            mask_color_3d = np.repeat(mask_color[:, :, np.newaxis], 3, axis=2)
-            current_frame_np = (1.0 - mask_color_3d) * sketch_img + mask_color_3d * color_img
+            mask_color = np.clip((p2_ratio * 1.40 - diag_dist) * 5.0, 0.0, 1.0)[:, :, None]
+            current_frame_np = (1.0 - mask_color) * sketch_img + mask_color * color_img
 
             sweep_x = int(p2_ratio * width * 0.88 + 30)
             sweep_y = int(p2_ratio * height * 0.78 + 60)
@@ -128,31 +153,25 @@ class ArtisticSketchEngine:
             active_hand_pos = (min(max(sweep_x + brush_wobble_x, 60), width - 60), min(max(sweep_y + brush_wobble_y, 80), height - 80))
 
         else:
-            # Full color completed (0.75 to 1.00) - Steady & Sharp, Pure Clean View
-            current_frame_np = color_img.copy()
+            # Between 0.75 and 0.85: completed color with pen retreating
+            current_frame_np = color_img
 
         frame_pil = Image.fromarray(np.clip(current_frame_np, 0, 255).astype(np.uint8))
 
-        # Draw Sleek Stylus Pen Overlay (pure pen, no hand)
         if hand_img:
-            pen_scale = (height / 1080.0) * 0.65
-            pw = max(int(hand_img.width * pen_scale), 50)
-            ph = max(int(hand_img.height * pen_scale), 50)
-            pen_resized = hand_img.resize((pw, ph), Image.Resampling.LANCZOS)
-            
-            # Precise nib offset: tip is at (12% of width, 88% of height)
-            tip_offset_x = int(pw * 0.12)
-            tip_offset_y = int(ph * 0.88)
+            pen_resized, tip_offset_x, tip_offset_y = self._get_resized_pen(hand_img, height)
 
             if active_hand_pos and progress < p2_end:
                 hx = int(active_hand_pos[0] - tip_offset_x)
                 hy = int(active_hand_pos[1] - tip_offset_y)
                 frame_pil.paste(pen_resized, (hx, hy), pen_resized)
-            elif p2_end <= progress < p3_end and active_hand_pos:
+            elif p2_end <= progress < p3_end:
                 retreat = (progress - p2_end) / (p3_end - p2_end)
                 retreat_eased = math.sin(retreat * math.pi / 2)
-                hx = int(active_hand_pos[0] - tip_offset_x + retreat_eased * (width * 0.6))
-                hy = int(active_hand_pos[1] - tip_offset_y - retreat_eased * (height * 0.6))
+                sweep_x = int(width * 0.88)
+                sweep_y = int(height * 0.78)
+                hx = int(sweep_x - tip_offset_x + retreat_eased * (width * 0.4))
+                hy = int(sweep_y - tip_offset_y - retreat_eased * (height * 0.4))
                 frame_pil.paste(pen_resized, (hx, hy), pen_resized)
 
         return frame_pil

@@ -102,7 +102,8 @@ class WhiteboardTTSEngine:
         try:
             ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
             cmd = [ffmpeg_exe, "-i", audio_path]
-            res = subprocess.run(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, text=True, errors="ignore")
+            flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+            res = subprocess.run(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, text=True, errors="ignore", creationflags=flags)
             for line in res.stderr.splitlines():
                 if "Duration:" in line:
                     parts = line.split("Duration:")[1].split(",")[0].strip()

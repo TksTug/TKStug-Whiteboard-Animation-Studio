@@ -1,4 +1,5 @@
 import os
+import sys
 import re
 import math
 import subprocess
@@ -33,6 +34,8 @@ class VideoRenderer:
         temp_dir = os.path.join(os.path.dirname(output_video_path), "temp_render")
         os.makedirs(temp_dir, exist_ok=True)
 
+        win_flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+
         scene_audio_files = []
         total_audio_duration = 0.0
 
@@ -61,7 +64,7 @@ class VideoRenderer:
                 f.write(f"file '{a.replace(chr(92), '/')}'\n")
 
         concat_cmd = [self.ffmpeg_exe, "-y", "-f", "concat", "-safe", "0", "-i", concat_list_file, "-c", "copy", merged_audio_path]
-        subprocess.run(concat_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.run(concat_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=win_flags)
 
         video_cmd = [
             self.ffmpeg_exe, "-y",
@@ -77,7 +80,7 @@ class VideoRenderer:
             "-crf", "18",
             raw_video_path
         ]
-        proc = subprocess.Popen(video_cmd, stdin=subprocess.PIPE)
+        proc = subprocess.Popen(video_cmd, stdin=subprocess.PIPE, creationflags=win_flags)
 
         total_frames = int(total_audio_duration * fps)
         current_global_frame = 0
@@ -91,15 +94,15 @@ class VideoRenderer:
         try:
             for s_idx, scene in enumerate(scenes):
                 scene_frames = int(scene.duration * fps)
-                art_id = getattr(scene, "artwork_id", "art_growth_nature")
+                art_id = getattr(scene, "artwork_id", "art_vn_quang_trung")
 
                 for f_idx in range(scene_frames):
                     current_global_frame += 1
                     progress = f_idx / max(scene_frames, 1)
 
-                    if progress_callback and current_global_frame % 6 == 0:
+                    if progress_callback and current_global_frame % 10 == 0:
                         pct = 15 + int((current_global_frame / total_frames) * 75)
-                        progress_callback(pct, f"Đang dựng Tranh Nghệ Thuật: Cảnh {s_idx + 1}/{len(scenes)} ({f_idx}/{scene_frames} frames)...")
+                        progress_callback(pct, f"Đang dựng Video Lịch Sử: Cảnh {s_idx + 1}/{len(scenes)} ({f_idx}/{scene_frames} frames)...")
 
                     frame_pil = self.artistic_engine.render_artistic_frame(
                         art_id=art_id,
@@ -119,7 +122,7 @@ class VideoRenderer:
             proc.wait()
 
             if progress_callback:
-                progress_callback(92, "Đang hòa trộn âm thanh và xuất file MP4...")
+                progress_callback(92, "Đang hòa trộn âm thanh và đóng gói Video MP4...")
 
             final_cmd = [
                 self.ffmpeg_exe, "-y",
@@ -131,7 +134,7 @@ class VideoRenderer:
                 "-shortest",
                 output_video_path
             ]
-            subprocess.run(final_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            subprocess.run(final_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=win_flags)
 
             if progress_callback:
                 progress_callback(100, "Hoàn thành xuất Video Lịch Sử hoàn chỉnh!")
