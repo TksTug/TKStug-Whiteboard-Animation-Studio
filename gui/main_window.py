@@ -9,7 +9,7 @@ from PIL import Image
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTextEdit,
     QPushButton, QComboBox, QSlider, QProgressBar, QListWidget, QListWidgetItem,
-    QFileDialog, QMessageBox, QGroupBox, QSplitter, QCheckBox
+    QFileDialog, QMessageBox, QGroupBox, QSplitter, QCheckBox, QTabWidget
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject, QRectF, QUrl
 from PyQt6.QtGui import QFont, QColor, QPainter, QImage
@@ -22,6 +22,7 @@ from backend.artistic_sketch_engine import ArtisticSketchEngine
 from backend.video_renderer import VideoRenderer
 from backend.ai_art_generator import AIArtGenerator
 from backend.utils import get_asset_path
+from gui.voice_changer_tab import CelebrityVoiceChangerTab
 
 class WorkerSignals(QObject):
     progress = pyqtSignal(int, str)
@@ -354,6 +355,34 @@ class MainWindow(QMainWindow):
                 border: 1px solid #475569;
                 background-color: #1e293b;
             }
+            
+            QTabWidget::pane {
+                border: 1px solid #334155;
+                background-color: #0f172a;
+                border-radius: 8px;
+            }
+            QTabBar::tab {
+                background-color: #1e293b;
+                color: #94a3b8;
+                font-weight: bold;
+                font-size: 13px;
+                padding: 10px 20px;
+                margin-right: 4px;
+                border-top-left-radius: 8px;
+                border-top-right-radius: 8px;
+                border: 1px solid #334155;
+                border-bottom: none;
+            }
+            QTabBar::tab:selected {
+                background-color: #0284c7;
+                color: #ffffff;
+                border-color: #38bdf8;
+            }
+            QTabBar::tab:hover:!selected {
+                background-color: #334155;
+                color: #f8fafc;
+            }
+
             QCheckBox::indicator:checked {
                 background-color: #0284c7;
                 border-color: #38bdf8;
@@ -364,17 +393,26 @@ class MainWindow(QMainWindow):
         self.central_widget = QWidget(self)
         self.setCentralWidget(self.central_widget)
         self.main_layout = QVBoxLayout(self.central_widget)
-        self.main_layout.setContentsMargins(14, 14, 14, 14)
-        self.main_layout.setSpacing(10)
+        self.main_layout.setContentsMargins(10, 10, 10, 10)
+        self.main_layout.setSpacing(8)
+
+        # Main Tab Widget
+        self.tabs = QTabWidget(self.central_widget)
+
+        # --- TAB 1: Whiteboard Studio ---
+        self.tab_whiteboard = QWidget()
+        wb_layout = QVBoxLayout(self.tab_whiteboard)
+        wb_layout.setContentsMargins(10, 10, 10, 10)
+        wb_layout.setSpacing(10)
 
         header_layout = QHBoxLayout()
         title_label = QLabel("✨ TKStug Whiteboard Animation Studio - Studio Hoạt Họa Lịch Sử 2D Nghệ Thuật (AI Masterpiece)")
-        title_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #38bdf8;")
+        title_label.setStyleSheet("font-size: 15px; font-weight: bold; color: #38bdf8;")
         header_layout.addWidget(title_label)
         header_layout.addStretch()
-        self.main_layout.addLayout(header_layout)
+        wb_layout.addLayout(header_layout)
 
-        self.splitter = QSplitter(Qt.Orientation.Horizontal, self)
+        self.splitter = QSplitter(Qt.Orientation.Horizontal, self.tab_whiteboard)
 
         # LEFT PANEL
         left_panel = QWidget(self.splitter)
@@ -556,11 +594,18 @@ class MainWindow(QMainWindow):
         self.btn_export.clicked.connect(self.on_start_export)
         st_layout.addWidget(self.btn_export)
 
-        right_layout.addWidget(settings_group)
         self.splitter.addWidget(right_panel)
-
         self.splitter.setSizes([450, 850])
-        self.main_layout.addWidget(self.splitter)
+        wb_layout.addWidget(self.splitter)
+
+        # Add Tab 1: Whiteboard Studio
+        self.tabs.addTab(self.tab_whiteboard, "🎬 1. Làm Video Hoạt Hình Bút Vẽ")
+
+        # Add Tab 2: Celebrity AI Voice Changer & Cover Studio
+        self.tab_voice_changer = CelebrityVoiceChangerTab(self)
+        self.tabs.addTab(self.tab_voice_changer, "🎵 2. AI Đổi Giọng Người Nổi Tiếng (AI Cover)")
+
+        self.main_layout.addWidget(self.tabs)
 
     def populate_artworks(self):
         self.cb_artwork.blockSignals(True)
