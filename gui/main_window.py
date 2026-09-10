@@ -34,6 +34,7 @@ class WhiteboardCanvasWidget(QWidget):
         self.current_scene: StoryScene = None
         self.theme = "vintage"
         self.progress = 0.0
+        self.show_hand = True
         self.is_animating = False
 
         self.artistic_engine = ArtisticSketchEngine()
@@ -116,13 +117,14 @@ class WhiteboardCanvasWidget(QWidget):
         is_static = not self.is_animating and (self.progress == 0.0 or self.progress == 1.0)
 
         # Render high-grade artistic frame
+        use_hand = getattr(self, "show_hand", True)
         frame_pil = self.artistic_engine.render_artistic_frame(
             art_id=art_id,
             progress=self.progress,
             width=w,
             height=h,
             sub_text=self.current_scene.text,
-            hand_img=self.hand_pil if self.is_animating else None,
+            hand_img=self.hand_pil if (self.is_animating and use_hand) else None,
             theme=self.theme,
             is_static=is_static
         )
@@ -390,6 +392,7 @@ class MainWindow(QMainWindow):
         chk_row = QHBoxLayout()
         self.chk_hand = QCheckBox("Bàn tay vẽ nét chì & quét màu nước")
         self.chk_hand.setChecked(True)
+        self.chk_hand.toggled.connect(self.on_hand_toggled)
         chk_row.addWidget(self.chk_hand)
 
         self.chk_camera = QCheckBox("Camera Pan & Zoom điện ảnh (Ken Burns)")
@@ -618,6 +621,11 @@ Và trong thế kỷ hai mươi, chiến thắng Điện Biên Phủ lừng lẫ
         if self.canvas_widget.current_scene:
             self.canvas_widget.set_scene(self.canvas_widget.current_scene, theme)
 
+    
+    def on_hand_toggled(self, checked: bool):
+        self.canvas_widget.show_hand = checked
+        self.canvas_widget.update()
+
     def on_start_export(self):
         if not self.current_scenes:
             QMessageBox.warning(self, "Chưa có phân cảnh", "Vui lòng phân cảnh kịch bản trước khi xuất video!")
@@ -658,11 +666,13 @@ Và trong thế kỷ hai mươi, chiến thắng Điện Biên Phủ lừng lẫ
                     return original_synth(txt, voice_id=voice_id)
                 self.video_renderer.tts_engine.synthesize = custom_synth
 
+                use_hand = self.chk_hand.isChecked()
                 ok = self.video_renderer.render_full_story(
                     self.current_scenes,
                     save_path,
                     resolution=resolution,
                     theme=theme,
+                    use_hand=use_hand,
                     progress_callback=p_cb
                 )
                 self.worker_signals.finished.emit(ok, save_path)

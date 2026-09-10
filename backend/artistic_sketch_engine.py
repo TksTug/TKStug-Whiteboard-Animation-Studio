@@ -61,11 +61,11 @@ class ArtisticSketchEngine:
         is_static: bool = False
     ) -> Image.Image:
         """
-        Fast & Snappy Pacing:
-        - Phase 1 (0.00 -> 0.28): Fast dynamic pencil/lineart sketch with energetic hand
-        - Phase 2 (0.28 -> 0.50): Vibrant anime color wash
-        - Phase 3 (0.50 -> 0.60): Smooth hand retreat
-        - Phase 4 (0.60 -> 1.00): Full artwork display with cinematic Ken Burns camera zoom and karaoke subtitles
+        Ultra-Fast Synchronized Pacing (Drawing completes early in first ~35% of narration):
+        - Phase 1 (0.00 -> 0.18): Fast energetic line-art pencil sketching
+        - Phase 2 (0.18 -> 0.35): Vibrant anime color wash
+        - Phase 3 (0.35 -> 0.44): Smooth hand retreat offscreen
+        - Phase 4 (0.44 -> 1.00): Full artwork showcase with cinematic Ken Burns camera zoom and real-time highlighted karaoke subtitles
         """
         color_p, sketch_p = self.get_artwork_paths(art_id)
         
@@ -79,7 +79,7 @@ class ArtisticSketchEngine:
             sketch_img = np.array(s_raw, dtype=np.float32)
             self.cached_artworks[cache_key] = (color_img, sketch_img)
 
-        # Blank background
+        # Base background canvas
         if theme == "whiteboard":
             base_bg = np.full((height, width, 3), 255.0, dtype=np.float32)
         elif theme == "vintage":
@@ -96,47 +96,47 @@ class ArtisticSketchEngine:
             return frame_pil
 
         # Fast Pacing Thresholds
-        p1_end = 0.28
-        p2_end = 0.50
-        p3_end = 0.60
+        p1_end = 0.18
+        p2_end = 0.35
+        p3_end = 0.44
 
         active_hand_pos = None
         y_indices, x_indices = np.indices((height, width))
         diag_dist = (x_indices / width * 0.65 + y_indices / height * 0.35)
 
         if progress < p1_end:
-            # Phase 1: Fast LineArt Sketching
+            # Phase 1: Rapid LineArt Sketching
             p1_ratio = progress / p1_end
-            mask_sketch = np.clip((p1_ratio * 1.4 - diag_dist) * 5.0, 0.0, 1.0)
+            mask_sketch = np.clip((p1_ratio * 1.35 - diag_dist) * 6.0, 0.0, 1.0)
             mask_sketch_3d = np.repeat(mask_sketch[:, :, np.newaxis], 3, axis=2)
             current_frame_np = (1.0 - mask_sketch_3d) * base_bg + mask_sketch_3d * sketch_img
             
-            sweep_x = int(p1_ratio * width * 0.88 + 40)
-            sweep_y = int(p1_ratio * height * 0.72 + 80)
-            wobble_x = int(math.sin(progress * 60) * 22)
-            wobble_y = int(math.cos(progress * 70) * 16)
+            sweep_x = int(p1_ratio * width * 0.85 + 40)
+            sweep_y = int(p1_ratio * height * 0.70 + 80)
+            wobble_x = int(math.sin(progress * 80) * 18)
+            wobble_y = int(math.cos(progress * 90) * 14)
             active_hand_pos = (min(max(sweep_x + wobble_x, 60), width - 60), min(max(sweep_y + wobble_y, 80), height - 80))
 
         elif p1_end <= progress < p2_end:
             # Phase 2: Vibrant Anime Color Wash
             p2_ratio = (progress - p1_end) / (p2_end - p1_end)
-            mask_color = np.clip((p2_ratio * 1.45 - diag_dist) * 4.2, 0.0, 1.0)
+            mask_color = np.clip((p2_ratio * 1.40 - diag_dist) * 5.0, 0.0, 1.0)
             mask_color_3d = np.repeat(mask_color[:, :, np.newaxis], 3, axis=2)
             current_frame_np = (1.0 - mask_color_3d) * sketch_img + mask_color_3d * color_img
 
-            sweep_x = int(p2_ratio * width * 0.90 + 30)
-            sweep_y = int(p2_ratio * height * 0.80 + 60)
-            brush_wobble_x = int(math.sin(progress * 45) * 32)
-            brush_wobble_y = int(math.cos(progress * 50) * 24)
+            sweep_x = int(p2_ratio * width * 0.88 + 30)
+            sweep_y = int(p2_ratio * height * 0.78 + 60)
+            brush_wobble_x = int(math.sin(progress * 60) * 24)
+            brush_wobble_y = int(math.cos(progress * 70) * 18)
             active_hand_pos = (min(max(sweep_x + brush_wobble_x, 60), width - 60), min(max(sweep_y + brush_wobble_y, 80), height - 80))
 
         else:
-            # Full color completed (0.50 to 1.00)
+            # Full color completed (0.35 to 1.00)
             current_frame_np = color_img.copy()
 
         frame_pil = Image.fromarray(np.clip(current_frame_np, 0, 255).astype(np.uint8))
 
-        # Phase 4: Cinematic Parallax / Ken Burns Zoom (0.60 to 1.00)
+        # Phase 4: Cinematic Ken Burns Parallax Zoom (0.44 to 1.00)
         if progress >= p3_end:
             zoom_factor = 1.0 + ((progress - p3_end) / (1.0 - p3_end)) * 0.06
             crop_w = int(width / zoom_factor)
@@ -145,22 +145,26 @@ class ArtisticSketchEngine:
             crop_box = (cx - crop_w // 2, cy - crop_h // 2, cx + crop_w // 2, cy + crop_h // 2)
             frame_pil = frame_pil.crop(crop_box).resize((width, height), Image.Resampling.LANCZOS)
 
-        # Draw Hand Overlay
+        # Draw Sleek Hand Overlay
         if hand_img:
-            hand_scale = (height / 1080.0) * 0.78
-            hw = max(int(hand_img.width * hand_scale), 50)
-            hh = max(int(hand_img.height * hand_scale), 50)
+            hand_scale = (height / 1080.0) * 0.72
+            hw = max(int(hand_img.width * hand_scale), 60)
+            hh = max(int(hand_img.height * hand_scale), 60)
             hand_resized = hand_img.resize((hw, hh), Image.Resampling.LANCZOS)
-            tip_x, tip_y = int(60 * hand_scale), int(60 * hand_scale)
+            
+            # Precise nib offset: 17.7% of width and height
+            tip_offset_x = int(hw * 0.177)
+            tip_offset_y = int(hh * 0.177)
 
             if active_hand_pos and progress < p2_end:
-                hx = int(active_hand_pos[0] - tip_x)
-                hy = int(active_hand_pos[1] - tip_y)
+                hx = int(active_hand_pos[0] - tip_offset_x)
+                hy = int(active_hand_pos[1] - tip_offset_y)
                 frame_pil.paste(hand_resized, (hx, hy), hand_resized)
             elif p2_end <= progress < p3_end and active_hand_pos:
                 retreat = (progress - p2_end) / (p3_end - p2_end)
-                hx = int(active_hand_pos[0] - tip_x + retreat * (width * 0.5))
-                hy = int(active_hand_pos[1] - tip_y + retreat * (height * 0.5))
+                retreat_eased = math.sin(retreat * math.pi / 2)
+                hx = int(active_hand_pos[0] - tip_offset_x + retreat_eased * (width * 0.6))
+                hy = int(active_hand_pos[1] - tip_offset_y + retreat_eased * (height * 0.6))
                 frame_pil.paste(hand_resized, (hx, hy), hand_resized)
 
         # Render Modern Word-by-Word Highlighted Subtitle Card

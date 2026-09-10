@@ -25,6 +25,7 @@ class VideoRenderer:
         output_video_path: str,
         resolution: tuple[int, int] = (1920, 1080),
         theme: str = "whiteboard",
+        use_hand: bool = True,
         progress_callback = None
     ) -> bool:
         width, height = resolution
@@ -47,10 +48,9 @@ class VideoRenderer:
             scene_audio_files.append(scene.audio_path)
             total_audio_duration += dur
 
-        if os.path.exists(self.hand_img_path):
+        hand_img = None
+        if use_hand and os.path.exists(self.hand_img_path):
             hand_img = Image.open(self.hand_img_path).convert("RGBA")
-        else:
-            hand_img = Image.new("RGBA", (200, 200), (0, 0, 0, 0))
 
         raw_video_path = os.path.join(temp_dir, "video_track.mp4")
         merged_audio_path = os.path.join(temp_dir, "merged_audio.mp3")
@@ -119,7 +119,7 @@ class VideoRenderer:
             proc.wait()
 
             if progress_callback:
-                progress_callback(95, "Đang đóng gói file Video MP4 hoàn chỉnh...")
+                progress_callback(92, "Đang hòa trộn âm thanh và xuất file MP4...")
 
             final_cmd = [
                 self.ffmpeg_exe, "-y",
@@ -134,11 +134,11 @@ class VideoRenderer:
             subprocess.run(final_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
             if progress_callback:
-                progress_callback(100, "Đã xuất Video Nghệ Thuật hoàn tất thành công! 🎉")
-
+                progress_callback(100, "Hoàn thành xuất Video Lịch Sử hoàn chỉnh!")
             return True
+
         except Exception as e:
-            print(f"Error rendering video: {e}")
+            print(f"Error during video render: {e}")
             if proc and proc.stdin:
                 proc.stdin.close()
             return False
