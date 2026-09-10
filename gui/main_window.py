@@ -28,9 +28,12 @@ class WorkerSignals(QObject):
 
 class WhiteboardCanvasWidget(QWidget):
     """Live interactive preview player showing multi-layer pencil sketch + watercolor inking in real-time"""
+    scene_completed = pyqtSignal(int)
+    progress_updated = pyqtSignal(float)
+
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setMinimumHeight(320)
+        self.setMinimumHeight(340)
         self.current_scene: StoryScene = None
         self.theme = "vintage"
         self.progress = 0.0
@@ -81,6 +84,7 @@ class WhiteboardCanvasWidget(QWidget):
 
         if audio_path and os.path.exists(audio_path):
             self.player.setSource(QUrl.fromLocalFile(audio_path))
+            self.player.setPosition(0)
             self.player.play()
 
         self.timer.start(20) # 50 fps smooth tick
@@ -92,13 +96,24 @@ class WhiteboardCanvasWidget(QWidget):
         self.player.pause()
         self.update()
 
+    def seek_progress(self, val_ratio: float):
+        self.progress = max(0.0, min(1.0, val_ratio))
+        self.elapsed_ms = int(self.progress * self.anim_duration_ms)
+        if self.player.duration() > 0:
+            target_pos = int(self.progress * self.player.duration())
+            self.player.setPosition(target_pos)
+        self.update()
+
     def on_tick(self):
         self.elapsed_ms += 20
         self.progress = min(self.elapsed_ms / max(self.anim_duration_ms, 1), 1.0)
+        self.progress_updated.emit(self.progress)
         self.update()
         if self.progress >= 1.0:
             self.is_animating = False
             self.timer.stop()
+            cur_idx = getattr(self.current_scene, "scene_index", 0)
+            self.scene_completed.emit(cur_idx)
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -139,13 +154,14 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("TKStug Whiteboard Studio - Dựng Video Lịch Sử & Kể Chuyện Nghệ Thuật (Tối Ưu 5-15 Phút)")
-        self.resize(1350, 890)
+        self.resize(1380, 910)
         self.setMinimumSize(1100, 750)
 
         self.tts_engine = WhiteboardTTSEngine()
         self.scene_manager = SceneManager()
         self.video_renderer = VideoRenderer(self.tts_engine)
         self.current_scenes: list[StoryScene] = []
+        self.is_playing_all = False
 
         self.signals = WorkerSignals()
         self.signals.preview_ready.connect(self._handle_preview_ready)
@@ -180,100 +196,165 @@ class MainWindow(QMainWindow):
             }
             QTextEdit, QListWidget {
                 background-color: #1e293b;
+                color: #f8fafc;
                 border: 1px solid #334155;
-                border-radius: 10px;
+                border-radius: 8px;
                 padding: 8px;
-                color: #f1f5f9;
                 font-size: 13px;
-                selection-background-color: #2563eb;
+                selection-background-color: #38bdf8;
+                selection-color: #0b1120;
             }
-            QTextEdit:focus, QListWidget:focus {
-                border: 1px solid #3b82f6;
+            QListWidget::item {
+                padding: 10px;
+                border-bottom: 1px solid #334155;
+                border-radius: 6px;
+                margin-bottom: 4px;
+            }
+            QListWidget::item:hover {
+                background-color: #334155;
+            }
+            QListWidget::item:selected {
+                background-color: #0284c7;
+                color: #ffffff;
+                font-weight: bold;
             }
             QPushButton {
-                background-color: #2563eb;
-                color: white;
+                background-color: #1e293b;
+                color: #f8fafc;
+                border: 1px solid #475569;
+                border-radius: 8px;
+                padding: 8px 14px;
                 font-weight: bold;
-                border-radius: 10px;
-                padding: 10px 16px;
                 font-size: 13px;
-                border: none;
             }
             QPushButton:hover {
-                background-color: #1d4ed8;
+                background-color: #334155;
+                border-color: #64748b;
             }
             QPushButton:pressed {
-                background-color: #1e40af;
+                background-color: #0f172a;
             }
-            QPushButton#secondaryBtn {
-                background-color: #334155;
-                color: #f8fafc;
+            QPushButton#primaryBtn {
+                background-color: #0284c7;
+                color: #ffffff;
+                border: 1px solid #38bdf8;
             }
-            QPushButton#secondaryBtn:hover {
-                background-color: #475569;
+            QPushButton#primaryBtn:hover {
+                background-color: #0369a1;
             }
-            QPushButton#accentBtn {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #2563eb, stop:1 #7c3aed);
-                font-size: 14px;
-                font-weight: 800;
-                padding: 14px 20px;
+            QPushButton#playAllBtn {
+                background-color: #8b5cf6;
+                color: #ffffff;
+                border: 1px solid #a78bfa;
+                font-size: 13px;
             }
-            QPushButton#accentBtn:hover {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #1d4ed8, stop:1 #6d28d9);
+            QPushButton#playAllBtn:hover {
+                background-color: #7c3aed;
             }
             QPushButton#playBtn {
                 background-color: #10b981;
-                font-size: 12px;
-                padding: 7px 16px;
-                font-weight: bold;
+                color: #ffffff;
+                border: 1px solid #34d399;
             }
             QPushButton#playBtn:hover {
                 background-color: #059669;
             }
+            QPushButton#accentBtn {
+                background-color: #f59e0b;
+                color: #000000;
+                font-weight: bold;
+                font-size: 14px;
+                border: 1px solid #fbbf24;
+                padding: 12px;
+            }
+            QPushButton#accentBtn:hover {
+                background-color: #d97706;
+            }
             QPushButton#uploadBtn {
-                background-color: #8b5cf6;
-                font-size: 12px;
-                padding: 6px 12px;
+                background-color: #4338ca;
+                color: #ffffff;
+                border: 1px solid #6366f1;
             }
             QPushButton#uploadBtn:hover {
-                background-color: #7c3aed;
+                background-color: #3730a3;
             }
             QComboBox {
                 background-color: #1e293b;
-                border: 1px solid #334155;
-                border-radius: 8px;
-                padding: 6px 12px;
                 color: #f8fafc;
+                border: 1px solid #334155;
+                border-radius: 6px;
+                padding: 6px 10px;
                 font-size: 12px;
             }
             QComboBox QAbstractItemView {
                 background-color: #1e293b;
                 color: #f8fafc;
-                selection-background-color: #2563eb;
+                selection-background-color: #0284c7;
+            }
+            QSlider::groove:horizontal {
+                height: 6px;
+                background: #334155;
+                border-radius: 3px;
+            }
+            QSlider::sub-page:horizontal {
+                background: #38bdf8;
+                border-radius: 3px;
+            }
+            QSlider::handle:horizontal {
+                background: #ffffff;
+                border: 2px solid #0284c7;
+                width: 16px;
+                margin-top: -5px;
+                margin-bottom: -5px;
+                border-radius: 8px;
             }
             QProgressBar {
-                background-color: #1e293b;
                 border: 1px solid #334155;
-                border-radius: 8px;
+                border-radius: 6px;
                 text-align: center;
-                color: white;
+                color: #ffffff;
                 font-weight: bold;
+                background-color: #1e293b;
             }
             QProgressBar::chunk {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #3b82f6, stop:1 #10b981);
-                border-radius: 7px;
+                background-color: #0284c7;
+                border-radius: 5px;
+            }
+            QCheckBox {
+                color: #e2e8f0;
+                font-size: 12px;
+                spacing: 8px;
+            }
+            QCheckBox::indicator {
+                width: 18px;
+                height: 18px;
+                border-radius: 4px;
+                border: 1px solid #475569;
+                background-color: #1e293b;
+            }
+            QCheckBox::indicator:checked {
+                background-color: #0284c7;
+                border-color: #38bdf8;
             }
         """)
 
     def setup_ui(self):
-        main_widget = QWidget()
-        self.setCentralWidget(main_widget)
-        main_layout = QHBoxLayout(main_widget)
-        main_layout.setContentsMargins(12, 12, 12, 12)
-        main_layout.setSpacing(12)
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QVBoxLayout(central_widget)
+        main_layout.setContentsMargins(14, 14, 14, 14)
+        main_layout.setSpacing(10)
 
+        # Header Title
+        header_layout = QHBoxLayout()
+        title_label = QLabel("✨ TKStug Whiteboard Animation Studio - Studio Hoạt Họa Lịch Sử 2D Nghệ Thuật")
+        title_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #38bdf8;")
+        header_layout.addWidget(title_label)
+        header_layout.addStretch()
+        main_layout.addLayout(header_layout)
+
+        # Main Splitter
         splitter = QSplitter(Qt.Orientation.Horizontal)
-        main_layout.addWidget(splitter)
 
         # LEFT PANEL
         left_panel = QWidget()
@@ -281,22 +362,15 @@ class MainWindow(QMainWindow):
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(10)
 
-        title_label = QLabel("🇻🇳 TKStug Studio - Dựng Video Lịch Sử & Kể Chuyện AI")
-        title_label.setStyleSheet("font-size: 17px; font-weight: 900; color: #38bdf8;")
-        left_layout.addWidget(title_label)
-
-        sub_label = QLabel("Hỗ Trợ Video Dài 5 - 15 Phút, Tranh Phác Thảo Nét Chì & Quét Màu Nước Cổ Phong")
-        sub_label.setStyleSheet("font-size: 11px; color: #94a3b8;")
-        left_layout.addWidget(sub_label)
-
-        script_group = QGroupBox("1. Kịch Bản Lịch Sử / Câu Chuyện Dài (5 - 15 Phút)")
+        script_group = QGroupBox("1. Nhập Kịch Bản Câu Chuyện")
         script_layout = QVBoxLayout(script_group)
         self.script_input = QTextEdit()
-        self.script_input.setPlaceholderText("Dán kịch bản lịch sử (dài 500 - 3000 từ) vào đây...")
+        self.script_input.setPlaceholderText("Dán hoặc gõ toàn bộ câu chuyện lịch sử / kịch bản tại đây...")
         script_layout.addWidget(self.script_input)
 
         btn_row = QHBoxLayout()
-        self.btn_auto_segment = QPushButton("⚡ Tự Động Phân Cảnh & Khớp Tranh Lịch Sử")
+        self.btn_auto_segment = QPushButton("🪄 Phân Tích & Tạo Phân Cảnh Tự Động")
+        self.btn_auto_segment.setObjectName("primaryBtn")
         self.btn_auto_segment.clicked.connect(self.on_auto_segment)
         btn_row.addWidget(self.btn_auto_segment)
 
@@ -331,17 +405,52 @@ class MainWindow(QMainWindow):
         prev_layout = QVBoxLayout(preview_group)
 
         self.canvas_widget = WhiteboardCanvasWidget()
+        self.canvas_widget.scene_completed.connect(self._on_scene_completed)
+        self.canvas_widget.progress_updated.connect(self._on_canvas_progress_updated)
         prev_layout.addWidget(self.canvas_widget)
 
+        # Seekbar Slider
+        seek_layout = QHBoxLayout()
+        self.lbl_time_cur = QLabel("00:00")
+        self.lbl_time_cur.setStyleSheet("font-size: 11px; color: #94a3b8;")
+        seek_layout.addWidget(self.lbl_time_cur)
+
+        self.slider_seek = QSlider(Qt.Orientation.Horizontal)
+        self.slider_seek.setRange(0, 1000)
+        self.slider_seek.setValue(0)
+        self.slider_seek.sliderMoved.connect(self.on_slider_moved)
+        seek_layout.addWidget(self.slider_seek)
+
+        self.lbl_time_total = QLabel("00:00")
+        self.lbl_time_total.setStyleSheet("font-size: 11px; color: #94a3b8;")
+        seek_layout.addWidget(self.lbl_time_total)
+        prev_layout.addLayout(seek_layout)
+
+        # Controls Row
         prev_ctrl = QHBoxLayout()
-        self.btn_play_preview = QPushButton("▶️ Nghe & Xem Vẽ Cảnh Này")
+        self.btn_play_all = QPushButton("🎬 Phát Toàn Bộ Video (Tất Cả Cảnh)")
+        self.btn_play_all.setObjectName("playAllBtn")
+        self.btn_play_all.clicked.connect(self.on_play_all)
+        prev_ctrl.addWidget(self.btn_play_all)
+
+        self.btn_prev_scene = QPushButton("⏮️")
+        self.btn_prev_scene.setToolTip("Cảnh trước")
+        self.btn_prev_scene.clicked.connect(self.on_prev_scene)
+        prev_ctrl.addWidget(self.btn_prev_scene)
+
+        self.btn_play_preview = QPushButton("▶️ Cảnh Này")
         self.btn_play_preview.setObjectName("playBtn")
         self.btn_play_preview.clicked.connect(self.on_play_preview)
         prev_ctrl.addWidget(self.btn_play_preview)
 
+        self.btn_next_scene = QPushButton("⏭️")
+        self.btn_next_scene.setToolTip("Cảnh tiếp theo")
+        self.btn_next_scene.clicked.connect(self.on_next_scene)
+        prev_ctrl.addWidget(self.btn_next_scene)
+
         self.btn_pause_preview = QPushButton("⏸️ Dừng")
         self.btn_pause_preview.setObjectName("secondaryBtn")
-        self.btn_pause_preview.clicked.connect(self.canvas_widget.pause_preview)
+        self.btn_pause_preview.clicked.connect(self.on_pause_clicked)
         prev_ctrl.addWidget(self.btn_pause_preview)
 
         prev_ctrl.addWidget(QLabel("Tranh:"))
@@ -452,54 +561,30 @@ class MainWindow(QMainWindow):
             ("art_coffee_peace", "☕ [Nghệ Thuật] Tách Cà Phê Bình Yên"),
             ("art_home_family", "🏡 [Nghệ Thuật] Ngôi Nhà & Gia Đình"),
             ("art_compass_journey", "🧭 [Nghệ Thuật] La Bàn Hành Trình"),
-            ("art_fire_passion", "🔥 [Nghệ Thuật] Ngọn Lửa Đam Mê"),
-            ("art_balance_scale", "⚖️ [Nghệ Thuật] Cán Cân Lựa Chọn"),
-            ("art_person_thinking", "🤔 [Nghệ Thuật] Người Suy Ngẫm"),
-            ("art_person_working", "💻 [Nghệ Thuật] Người Làm Việc Chăm Chỉ")
+            ("art_fire_passion", "🔥 [Nghệ Thuật] Ngọn Lửa Khát Vọng"),
+            ("art_balance_scale", "⚖️ [Nghệ Thuật] Cán Cân Cân Bằng"),
+            ("art_person_thinking", "🤔 [Nghệ Thuật] Suy Tư & Kế Sách"),
+            ("art_person_working", "✍️ [Nghệ Thuật] Bàn Làm Việc & Sáng Tạo")
         ]
-        
         for aid, title in artwork_items:
             self.cb_artwork.addItem(title, aid)
-            
         self.cb_artwork.blockSignals(False)
 
     def populate_voices(self):
         self.cb_voice.clear()
-        turbo_voices = []
-        studio_voices = []
-
         for v in self.tts_engine.voices_data:
-            v_id = v.get("id") or v.get("sample")
-            name = v.get("name", "Giọng AI")
-            tag = v.get("tag", "")
-            gender = v.get("gender", "")
-            icon = "👨" if "nam" in gender.lower() or "male" in str(v).lower() else "👩"
-
-            if v.get("voice_type") == "turbo" or "Siêu Tốc" in name:
-                turbo_voices.append((f"⚡ [SIÊU TỐC] {icon} {name}", v_id))
-            else:
-                studio_voices.append((f"💎 [STUDIO] {icon} {name} ({tag})", v_id))
-
-        for title, vid in turbo_voices:
-            self.cb_voice.addItem(title, vid)
-
-        for title, vid in studio_voices:
-            self.cb_voice.addItem(title, vid)
-
-        if self.cb_voice.count() > 0:
-            self.cb_voice.setCurrentIndex(0)
+            display = f"{v.get('name', 'Voice')} ({v.get('gender', 'N/A')})"
+            self.cb_voice.addItem(display, v.get("id"))
+        self.cb_voice.setCurrentIndex(0)
 
     def load_sample_story(self):
-        sample = """Lịch sử hào hùng của dân tộc Việt Nam được dựng xây bằng máu, mồ hôi và lòng quả cảm của biết bao thế hệ tiền nhân.
-
-Từ tiếng vang của tiếng Trống Đồng Đông Sơn thời các vua Hùng dựng nước Văn Lang, hào khí non sông đã chảy sâu vào huyết quản mỗi người con đất Việt.
-
-Vào mùa đông năm 938, trên dòng sông Bạch Đằng lịch sử, Ngô Quyền đã cho bố trí trận địa cọc gỗ ngầm xé tan đoàn chiến thuyền Nam Hán, mở ra kỷ nguyên độc lập tự chủ lâu dài cho dân tộc.
-
-Đến mùa xuân Kỷ Dậu năm 1789, người anh hùng áo vải cờ đào Nguyễn Huệ - Hoàng đế Quang Trung đã hành quân thần tốc đại phá 29 vạn quân Thanh, làm nên chiến thắng Ngọc Hồi - Đống Đa vang dội muôn đời.
-
-Và trong thế kỷ hai mươi, chiến thắng Điện Biên Phủ lừng lẫy năm châu chấn động địa cầu đã khẳng định bản lĩnh kiên cường, khát vọng tự do cháy bỏng của đất nước Việt Nam."""
-        self.script_input.setText(sample)
+        sample = (
+            "Hơn hai ngàn năm dựng nước và giữ nước, non sông Việt Nam ngời sáng tinh thần bất khuất.\n\n"
+            "Từ tiếng Trống Đồng Đông Sơn thời các vua Hùng định đô, hun đúc nên nguồn cội dân tộc Việt Nam.\n\n"
+            "Đến ngọn sóng Bạch Đằng giang cuồn cuộn cọc gỗ nhọn, ngàn thu rửa sạch vết nhục xâm lăng.\n\n"
+            "Và mùa xuân Kỷ Dậu năm 1789, Hoàng đế Quang Trung áo vải cờ đào thần tốc hành quân, quét sạch hai mươi chín vạn quân Mãn Thanh."
+        )
+        self.script_input.setPlainText(sample)
         self.on_auto_segment()
 
     def on_auto_segment(self):
@@ -512,7 +597,7 @@ Và trong thế kỷ hai mươi, chiến thắng Điện Biên Phủ lừng lẫ
         self.scene_list.clear()
 
         for s in self.current_scenes:
-            item = QListWidgetItem(f"🎬 {s.title}\n   \"{s.text[:55]}...\"")
+            item = QListWidgetItem(f"🎬 {s.title}\n   "{s.text[:55]}..."")
             self.scene_list.addItem(item)
 
         if self.current_scenes:
@@ -540,7 +625,6 @@ Và trong thế kỷ hai mươi, chiến thắng Điện Biên Phủ lừng lẫ
                 break
 
         if not found and os.path.exists(art_id):
-            # Custom image item
             self.cb_artwork.blockSignals(True)
             custom_title = f"🖼️ [Ảnh Riêng] {os.path.basename(art_id)}"
             self.cb_artwork.addItem(custom_title, art_id)
@@ -548,33 +632,106 @@ Và trong thế kỷ hai mươi, chiến thắng Điện Biên Phủ lừng lẫ
             self.cb_artwork.blockSignals(False)
 
         self.canvas_widget.set_scene(scene, self.cb_theme.currentData())
+        dur = scene.duration or 4.0
+        self.lbl_time_total.setText(f"{int(dur // 60):02d}:{int(dur % 60):02d}")
+        self.lbl_time_cur.setText("00:00")
+        self.slider_seek.setValue(0)
+
+    def on_play_all(self):
+        if not self.current_scenes:
+            return
+        if self.is_playing_all:
+            self.is_playing_all = False
+            self.canvas_widget.pause_preview()
+            self.btn_play_all.setText("🎬 Phát Toàn Bộ Video")
+            self.lbl_status.setText("Đã tạm dừng phát toàn bộ.")
+            return
+
+        self.is_playing_all = True
+        self.btn_play_all.setText("⏸️ Dừng Phát Toàn Bộ")
+        cur_row = self.scene_list.currentRow()
+        if cur_row < 0 or cur_row >= len(self.current_scenes):
+            cur_row = 0
+            self.scene_list.setCurrentRow(0)
+        self.play_scene_at(cur_row, continue_all=True)
 
     def on_play_preview(self):
+        self.is_playing_all = False
+        self.btn_play_all.setText("🎬 Phát Toàn Bộ Video")
         row = self.scene_list.currentRow()
         if 0 <= row < len(self.current_scenes):
-            scene = self.current_scenes[row]
-            voice_id = self.cb_voice.currentData()
-            self.lbl_status.setText("Đang chuẩn bị giọng đọc xem trước...")
+            self.play_scene_at(row, continue_all=False)
 
-            def synth_and_play():
-                if not scene.audio_path or not os.path.exists(scene.audio_path):
-                    audio_p, dur = self.tts_engine.synthesize(scene.text, voice_id=voice_id)
-                    scene.audio_path = audio_p
-                    scene.duration = max(dur, 2.5)
-                else:
-                    dur = scene.duration
-                    audio_p = scene.audio_path
-                self.signals.preview_ready.emit(row, audio_p, dur)
+    def play_scene_at(self, row: int, continue_all: bool = False):
+        if row < 0 or row >= len(self.current_scenes):
+            return
+        scene = self.current_scenes[row]
+        voice_id = self.cb_voice.currentData()
+        self.lbl_status.setText(f"Đang chuẩn bị giọng đọc Cảnh {row+1}/{len(self.current_scenes)}...")
 
-            threading.Thread(target=synth_and_play, daemon=True).start()
+        def synth_and_play():
+            if not scene.audio_path or not os.path.exists(scene.audio_path):
+                audio_p, dur = self.tts_engine.synthesize(scene.text, voice_id=voice_id)
+                scene.audio_path = audio_p
+                scene.duration = max(dur, 2.5)
+            else:
+                dur = scene.duration
+                audio_p = scene.audio_path
+            self.signals.preview_ready.emit(row, audio_p, dur)
+
+        threading.Thread(target=synth_and_play, daemon=True).start()
 
     def _handle_preview_ready(self, row: int, audio_p: str, dur: float):
-        """Thread-safe handler executing on Main GUI Thread"""
         if 0 <= row < len(self.current_scenes):
             scene = self.current_scenes[row]
+            scene.duration = dur
+            self.lbl_time_total.setText(f"{int(dur // 60):02d}:{int(dur % 60):02d}")
             self.canvas_widget.set_scene(scene, self.cb_theme.currentData())
             self.canvas_widget.start_preview(audio_p, dur)
-            self.lbl_status.setText(f"Đang phát xem trước Cảnh {row+1} ({dur:.1f}s)...")
+            self.lbl_status.setText(f"Đang phát Cảnh {row+1}/{len(self.current_scenes)} ({dur:.1f}s)...")
+
+    def _on_scene_completed(self, completed_idx: int):
+        if self.is_playing_all:
+            next_idx = completed_idx + 1
+            if next_idx < len(self.current_scenes):
+                self.scene_list.setCurrentRow(next_idx)
+                self.play_scene_at(next_idx, continue_all=True)
+            else:
+                self.is_playing_all = False
+                self.btn_play_all.setText("🎬 Phát Toàn Bộ Video")
+                self.lbl_status.setText("Đã xem xong toàn bộ video! 🎉")
+
+    def _on_canvas_progress_updated(self, progress: float):
+        self.slider_seek.blockSignals(True)
+        self.slider_seek.setValue(int(progress * 1000))
+        self.slider_seek.blockSignals(False)
+        dur = getattr(self.canvas_widget.current_scene, "duration", 4.0) if self.canvas_widget.current_scene else 4.0
+        cur_sec = progress * dur
+        self.lbl_time_cur.setText(f"{int(cur_sec // 60):02d}:{int(cur_sec % 60):02d}")
+
+    def on_slider_moved(self, val: int):
+        ratio = val / 1000.0
+        self.canvas_widget.seek_progress(ratio)
+
+    def on_prev_scene(self):
+        cur_row = self.scene_list.currentRow()
+        if cur_row > 0:
+            self.scene_list.setCurrentRow(cur_row - 1)
+            if self.is_playing_all or self.canvas_widget.is_animating:
+                self.play_scene_at(cur_row - 1, continue_all=self.is_playing_all)
+
+    def on_next_scene(self):
+        cur_row = self.scene_list.currentRow()
+        if cur_row < len(self.current_scenes) - 1:
+            self.scene_list.setCurrentRow(cur_row + 1)
+            if self.is_playing_all or self.canvas_widget.is_animating:
+                self.play_scene_at(cur_row + 1, continue_all=self.is_playing_all)
+
+    def on_pause_clicked(self):
+        self.is_playing_all = False
+        self.btn_play_all.setText("🎬 Phát Toàn Bộ Video")
+        self.canvas_widget.pause_preview()
+        self.lbl_status.setText("Đã tạm dừng xem trước.")
 
     def on_scene_text_changed(self):
         row = self.scene_list.currentRow()
@@ -582,8 +739,9 @@ Và trong thế kỷ hai mươi, chiến thắng Điện Biên Phủ lừng lẫ
             new_text = self.scene_text_edit.toPlainText().strip()
             self.current_scenes[row].text = new_text
             self.current_scenes[row].audio_path = None
-            self.canvas_widget.current_scene.text = new_text
-            self.canvas_widget.update()
+            if self.canvas_widget.current_scene:
+                self.canvas_widget.current_scene.text = new_text
+                self.canvas_widget.update()
 
     def on_artwork_changed(self, idx: int):
         row = self.scene_list.currentRow()
@@ -621,7 +779,6 @@ Và trong thế kỷ hai mươi, chiến thắng Điện Biên Phủ lừng lẫ
         if self.canvas_widget.current_scene:
             self.canvas_widget.set_scene(self.canvas_widget.current_scene, theme)
 
-    
     def on_hand_toggled(self, checked: bool):
         self.canvas_widget.show_hand = checked
         self.canvas_widget.update()
@@ -648,6 +805,7 @@ Và trong thế kỷ hai mươi, chiến thắng Điện Biên Phủ lừng lẫ
         theme = self.cb_theme.currentData()
         resolution = self.cb_ratio.currentData()
         voice_id = self.cb_voice.currentData()
+        use_hand = self.chk_hand.isChecked()
 
         self.worker_signals = WorkerSignals()
         self.worker_signals.progress.connect(self.on_render_progress)
@@ -666,7 +824,6 @@ Và trong thế kỷ hai mươi, chiến thắng Điện Biên Phủ lừng lẫ
                     return original_synth(txt, voice_id=voice_id)
                 self.video_renderer.tts_engine.synthesize = custom_synth
 
-                use_hand = self.chk_hand.isChecked()
                 ok = self.video_renderer.render_full_story(
                     self.current_scenes,
                     save_path,
@@ -700,7 +857,13 @@ Và trong thế kỷ hai mươi, chiến thắng Điện Biên Phủ lừng lẫ
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
             )
             if ret == QMessageBox.StandardButton.Yes:
-                os.startfile(os.path.dirname(msg))
+                folder = os.path.dirname(msg)
+                if sys.platform == "win32":
+                    os.startfile(folder)
+                elif sys.platform == "darwin":
+                    subprocess.Popen(["open", folder])
+                else:
+                    subprocess.Popen(["xdg-open", folder])
         else:
-            self.lbl_status.setText("Có lỗi xảy ra khi xuất video.")
-            QMessageBox.critical(self, "Lỗi Xuất Video", f"Quá trình dựng video gặp sự cố:\n{msg}")
+            self.lbl_status.setText("Có lỗi xảy ra trong quá trình xuất video.")
+            QMessageBox.critical(self, "Lỗi Xuất Video", f"Không thể xuất video:\n{msg}")
