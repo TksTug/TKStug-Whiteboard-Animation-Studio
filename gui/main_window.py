@@ -532,7 +532,7 @@ class MainWindow(QMainWindow):
         st_layout.addLayout(tr_row)
 
         chk_row = QHBoxLayout()
-        self.chk_hand = QCheckBox("Bàn tay vẽ nét chì & quét màu nước", settings_group)
+        self.chk_hand = QCheckBox("Bút vẽ nét chì & quét màu nước (Stylus Pen)", settings_group)
         self.chk_hand.setChecked(True)
         self.chk_hand.toggled.connect(self.on_hand_toggled)
         chk_row.addWidget(self.chk_hand)

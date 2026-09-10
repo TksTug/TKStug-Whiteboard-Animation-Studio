@@ -133,26 +133,26 @@ class ArtisticSketchEngine:
 
         frame_pil = Image.fromarray(np.clip(current_frame_np, 0, 255).astype(np.uint8))
 
-        # Draw Hand Overlay (only during drawing phases)
+        # Draw Sleek Stylus Pen Overlay (pure pen, no hand)
         if hand_img:
-            hand_scale = (height / 1080.0) * 0.72
-            hw = max(int(hand_img.width * hand_scale), 60)
-            hh = max(int(hand_img.height * hand_scale), 60)
-            hand_resized = hand_img.resize((hw, hh), Image.Resampling.LANCZOS)
+            pen_scale = (height / 1080.0) * 0.65
+            pw = max(int(hand_img.width * pen_scale), 50)
+            ph = max(int(hand_img.height * pen_scale), 50)
+            pen_resized = hand_img.resize((pw, ph), Image.Resampling.LANCZOS)
             
-            # Precise tip offset: 17.7% of width and height
-            tip_offset_x = int(hw * 0.177)
-            tip_offset_y = int(hh * 0.177)
+            # Precise nib offset: tip is at (12% of width, 88% of height)
+            tip_offset_x = int(pw * 0.12)
+            tip_offset_y = int(ph * 0.88)
 
             if active_hand_pos and progress < p2_end:
                 hx = int(active_hand_pos[0] - tip_offset_x)
                 hy = int(active_hand_pos[1] - tip_offset_y)
-                frame_pil.paste(hand_resized, (hx, hy), hand_resized)
+                frame_pil.paste(pen_resized, (hx, hy), pen_resized)
             elif p2_end <= progress < p3_end and active_hand_pos:
                 retreat = (progress - p2_end) / (p3_end - p2_end)
                 retreat_eased = math.sin(retreat * math.pi / 2)
                 hx = int(active_hand_pos[0] - tip_offset_x + retreat_eased * (width * 0.6))
-                hy = int(active_hand_pos[1] - tip_offset_y + retreat_eased * (height * 0.6))
-                frame_pil.paste(hand_resized, (hx, hy), hand_resized)
+                hy = int(active_hand_pos[1] - tip_offset_y - retreat_eased * (height * 0.6))
+                frame_pil.paste(pen_resized, (hx, hy), pen_resized)
 
         return frame_pil
