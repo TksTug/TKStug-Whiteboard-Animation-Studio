@@ -13,3 +13,52 @@ Traceback (most recent call last):
                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 SyntaxError: invalid syntax. Perhaps you forgot a comma?
 
+=== Starting TKStug Whiteboard Studio ===
+Importing PyQt6...
+Importing MainWindow...
+CRITICAL ERROR:
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    import main; from gui.main_window import MainWindow; from PyQt6.QtWidgets import QApplication; app = QApplication([]); w = MainWindow(); print('MainWindow created successfully!')
+                                                                                                                               ~~~~~~~~~~^^
+  File "C:\Users\PC\Desktop\frb\tkstug_whiteboard_studio\gui\main_window.py", line 171, in __init__
+    self.populate_voices()
+    ~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\PC\Desktop\frb\tkstug_whiteboard_studio\gui\main_window.py", line 572, in populate_voices
+    self.cb_voice.clear()
+    ~~~~~~~~~~~~~~~~~~~^^
+RuntimeError: wrapped C/C++ object of type QComboBox has been deleted
+
+=== Starting TKStug Whiteboard Studio ===
+Importing PyQt6...
+Importing MainWindow...
+Creating QApplication...
+Creating MainWindow...
+Top-level exception:
+Traceback (most recent call last):
+  File "c:\Users\PC\Desktop\frb\tkstug_whiteboard_studio\main.py", line 59, in <module>
+    main()
+    ~~~~^^
+  File "c:\Users\PC\Desktop\frb\tkstug_whiteboard_studio\main.py", line 53, in main
+    window = MainWindow()
+  File "c:\Users\PC\Desktop\frb\tkstug_whiteboard_studio\gui\main_window.py", line 171, in __init__
+    self.populate_voices()
+    ~~~~~~~~~~~~~~~~~~~~^^
+  File "c:\Users\PC\Desktop\frb\tkstug_whiteboard_studio\gui\main_window.py", line 572, in populate_voices
+    self.cb_voice.clear()
+    ~~~~~~~~~~~~~~~~~~~^^
+RuntimeError: wrapped C/C++ object of type QComboBox has been deleted
+
+=== Starting TKStug Whiteboard Studio ===
+Importing PyQt6...
+Importing MainWindow...
+CRITICAL ERROR:
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    import main; from gui.main_window import MainWindow; from PyQt6.QtWidgets import QApplication; app = QApplication([]); w = MainWindow(); print('TITLE:', w.windowTitle()); print('SCENES:', len(w.current_scenes)); print('VOICES:', w.cb_voice.count())
+                                                                                                                                             ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\PC\AppData\Local\Python\pythoncore-3.14-64\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u1ef1' in position 28: character maps to <undefined>
+

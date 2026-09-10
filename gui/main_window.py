@@ -1,6 +1,7 @@
 import os
 import sys
 import threading
+import subprocess
 import math
 import numpy as np
 from PIL import Image
@@ -8,10 +9,10 @@ from PIL import Image
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTextEdit,
     QPushButton, QComboBox, QSlider, QProgressBar, QListWidget, QListWidgetItem,
-    QFileDialog, QMessageBox, QGroupBox, QFrame, QSplitter, QCheckBox, QScrollArea
+    QFileDialog, QMessageBox, QGroupBox, QSplitter, QCheckBox
 )
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject, QPointF, QRectF, QUrl
-from PyQt6.QtGui import QFont, QIcon, QColor, QPainter, QPen, QBrush, QPixmap, QImage
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject, QRectF, QUrl
+from PyQt6.QtGui import QFont, QColor, QPainter, QImage
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 
 from backend.tts_engine import WhiteboardTTSEngine
@@ -87,7 +88,7 @@ class WhiteboardCanvasWidget(QWidget):
             self.player.setPosition(0)
             self.player.play()
 
-        self.timer.start(20) # 50 fps smooth tick
+        self.timer.start(20)
         self.update()
 
     def pause_preview(self):
@@ -160,7 +161,7 @@ class MainWindow(QMainWindow):
         self.tts_engine = WhiteboardTTSEngine()
         self.scene_manager = SceneManager()
         self.video_renderer = VideoRenderer(self.tts_engine)
-        self.current_scenes: list[StoryScene] = []
+        self.current_scenes = []
         self.is_playing_all = False
 
         self.signals = WorkerSignals()
@@ -339,133 +340,131 @@ class MainWindow(QMainWindow):
         """)
 
     def setup_ui(self):
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        main_layout = QVBoxLayout(central_widget)
-        main_layout.setContentsMargins(14, 14, 14, 14)
-        main_layout.setSpacing(10)
+        self.central_widget = QWidget(self)
+        self.setCentralWidget(self.central_widget)
+        self.main_layout = QVBoxLayout(self.central_widget)
+        self.main_layout.setContentsMargins(14, 14, 14, 14)
+        self.main_layout.setSpacing(10)
 
-        # Header Title
         header_layout = QHBoxLayout()
         title_label = QLabel("✨ TKStug Whiteboard Animation Studio - Studio Hoạt Họa Lịch Sử 2D Nghệ Thuật")
         title_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #38bdf8;")
         header_layout.addWidget(title_label)
         header_layout.addStretch()
-        main_layout.addLayout(header_layout)
+        self.main_layout.addLayout(header_layout)
 
-        # Main Splitter
-        splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.splitter = QSplitter(Qt.Orientation.Horizontal, self)
 
         # LEFT PANEL
-        left_panel = QWidget()
+        left_panel = QWidget(self.splitter)
         left_layout = QVBoxLayout(left_panel)
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(10)
 
-        script_group = QGroupBox("1. Nhập Kịch Bản Câu Chuyện")
+        script_group = QGroupBox("1. Nhập Kịch Bản Câu Chuyện", left_panel)
         script_layout = QVBoxLayout(script_group)
-        self.script_input = QTextEdit()
+        self.script_input = QTextEdit(script_group)
         self.script_input.setPlaceholderText("Dán hoặc gõ toàn bộ câu chuyện lịch sử / kịch bản tại đây...")
         script_layout.addWidget(self.script_input)
 
         btn_row = QHBoxLayout()
-        self.btn_auto_segment = QPushButton("🪄 Phân Tích & Tạo Phân Cảnh Tự Động")
+        self.btn_auto_segment = QPushButton("🪄 Phân Tích & Tạo Phân Cảnh Tự Động", script_group)
         self.btn_auto_segment.setObjectName("primaryBtn")
         self.btn_auto_segment.clicked.connect(self.on_auto_segment)
         btn_row.addWidget(self.btn_auto_segment)
 
-        self.btn_sample_hist = QPushButton("Mẫu Lịch Sử")
+        self.btn_sample_hist = QPushButton("Mẫu Lịch Sử", script_group)
         self.btn_sample_hist.setObjectName("secondaryBtn")
         self.btn_sample_hist.clicked.connect(self.load_sample_story)
         btn_row.addWidget(self.btn_sample_hist)
 
-        self.btn_clear = QPushButton("Xóa")
+        self.btn_clear = QPushButton("Xóa", script_group)
         self.btn_clear.setObjectName("secondaryBtn")
         self.btn_clear.clicked.connect(self.script_input.clear)
         btn_row.addWidget(self.btn_clear)
         script_layout.addLayout(btn_row)
         left_layout.addWidget(script_group)
 
-        storyboard_group = QGroupBox("2. Danh Sách Phân Cảnh (Storyboard)")
+        storyboard_group = QGroupBox("2. Danh Sách Phân Cảnh (Storyboard)", left_panel)
         sb_layout = QVBoxLayout(storyboard_group)
-        self.scene_list = QListWidget()
+        self.scene_list = QListWidget(storyboard_group)
         self.scene_list.currentRowChanged.connect(self.on_scene_selected)
         sb_layout.addWidget(self.scene_list)
         left_layout.addWidget(storyboard_group)
 
-        splitter.addWidget(left_panel)
+        self.splitter.addWidget(left_panel)
 
         # RIGHT PANEL
-        right_panel = QWidget()
+        right_panel = QWidget(self.splitter)
         right_layout = QVBoxLayout(right_panel)
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(10)
 
-        preview_group = QGroupBox("3. Màn Hình Xem Trước Nét Vẽ & Quét Màu (Live Player)")
+        preview_group = QGroupBox("3. Màn Hình Xem Trước Nét Vẽ & Quét Màu (Live Player)", right_panel)
         prev_layout = QVBoxLayout(preview_group)
 
-        self.canvas_widget = WhiteboardCanvasWidget()
+        self.canvas_widget = WhiteboardCanvasWidget(preview_group)
         self.canvas_widget.scene_completed.connect(self._on_scene_completed)
         self.canvas_widget.progress_updated.connect(self._on_canvas_progress_updated)
         prev_layout.addWidget(self.canvas_widget)
 
         # Seekbar Slider
         seek_layout = QHBoxLayout()
-        self.lbl_time_cur = QLabel("00:00")
+        self.lbl_time_cur = QLabel("00:00", preview_group)
         self.lbl_time_cur.setStyleSheet("font-size: 11px; color: #94a3b8;")
         seek_layout.addWidget(self.lbl_time_cur)
 
-        self.slider_seek = QSlider(Qt.Orientation.Horizontal)
+        self.slider_seek = QSlider(Qt.Orientation.Horizontal, preview_group)
         self.slider_seek.setRange(0, 1000)
         self.slider_seek.setValue(0)
         self.slider_seek.sliderMoved.connect(self.on_slider_moved)
         seek_layout.addWidget(self.slider_seek)
 
-        self.lbl_time_total = QLabel("00:00")
+        self.lbl_time_total = QLabel("00:00", preview_group)
         self.lbl_time_total.setStyleSheet("font-size: 11px; color: #94a3b8;")
         seek_layout.addWidget(self.lbl_time_total)
         prev_layout.addLayout(seek_layout)
 
         # Controls Row
         prev_ctrl = QHBoxLayout()
-        self.btn_play_all = QPushButton("🎬 Phát Toàn Bộ Video (Tất Cả Cảnh)")
+        self.btn_play_all = QPushButton("🎬 Phát Toàn Bộ Video (Tất Cả Cảnh)", preview_group)
         self.btn_play_all.setObjectName("playAllBtn")
         self.btn_play_all.clicked.connect(self.on_play_all)
         prev_ctrl.addWidget(self.btn_play_all)
 
-        self.btn_prev_scene = QPushButton("⏮️")
+        self.btn_prev_scene = QPushButton("⏮️", preview_group)
         self.btn_prev_scene.setToolTip("Cảnh trước")
         self.btn_prev_scene.clicked.connect(self.on_prev_scene)
         prev_ctrl.addWidget(self.btn_prev_scene)
 
-        self.btn_play_preview = QPushButton("▶️ Cảnh Này")
+        self.btn_play_preview = QPushButton("▶️ Cảnh Này", preview_group)
         self.btn_play_preview.setObjectName("playBtn")
         self.btn_play_preview.clicked.connect(self.on_play_preview)
         prev_ctrl.addWidget(self.btn_play_preview)
 
-        self.btn_next_scene = QPushButton("⏭️")
+        self.btn_next_scene = QPushButton("⏭️", preview_group)
         self.btn_next_scene.setToolTip("Cảnh tiếp theo")
         self.btn_next_scene.clicked.connect(self.on_next_scene)
         prev_ctrl.addWidget(self.btn_next_scene)
 
-        self.btn_pause_preview = QPushButton("⏸️ Dừng")
+        self.btn_pause_preview = QPushButton("⏸️ Dừng", preview_group)
         self.btn_pause_preview.setObjectName("secondaryBtn")
         self.btn_pause_preview.clicked.connect(self.on_pause_clicked)
         prev_ctrl.addWidget(self.btn_pause_preview)
 
-        prev_ctrl.addWidget(QLabel("Tranh:"))
-        self.cb_artwork = QComboBox()
+        prev_ctrl.addWidget(QLabel("Tranh:", preview_group))
+        self.cb_artwork = QComboBox(preview_group)
         self.cb_artwork.currentIndexChanged.connect(self.on_artwork_changed)
         prev_ctrl.addWidget(self.cb_artwork)
 
-        self.btn_upload_img = QPushButton("📁 Tải Ảnh Riêng")
+        self.btn_upload_img = QPushButton("📁 Tải Ảnh Riêng", preview_group)
         self.btn_upload_img.setObjectName("uploadBtn")
         self.btn_upload_img.clicked.connect(self.on_upload_custom_image)
         prev_ctrl.addWidget(self.btn_upload_img)
 
         prev_layout.addLayout(prev_ctrl)
 
-        self.scene_text_edit = QTextEdit()
+        self.scene_text_edit = QTextEdit(preview_group)
         self.scene_text_edit.setMaximumHeight(65)
         self.scene_text_edit.setPlaceholderText("Nội dung câu của phân cảnh đang chọn...")
         self.scene_text_edit.textChanged.connect(self.on_scene_text_changed)
@@ -473,60 +472,61 @@ class MainWindow(QMainWindow):
 
         right_layout.addWidget(preview_group)
 
-        settings_group = QGroupBox("4. Cài Đặt Xuất Video MP4 Hoàn Chỉnh")
+        settings_group = QGroupBox("4. Cài Đặt Xuất Video MP4 Hoàn Chỉnh", right_panel)
         st_layout = QVBoxLayout(settings_group)
 
         v_row = QHBoxLayout()
-        v_row.addWidget(QLabel("🎙️ Giọng đọc AI (64 giọng):"))
-        self.cb_voice = QComboBox()
+        v_row.addWidget(QLabel("🎙️ Giọng đọc AI (64 giọng):", settings_group))
+        self.cb_voice = QComboBox(settings_group)
         v_row.addWidget(self.cb_voice)
         st_layout.addLayout(v_row)
 
         tr_row = QHBoxLayout()
-        tr_row.addWidget(QLabel("📜 Phong cách:"))
-        self.cb_theme = QComboBox()
+        tr_row.addWidget(QLabel("📜 Phong cách:", settings_group))
+        self.cb_theme = QComboBox(settings_group)
         self.cb_theme.addItem("📜 Giấy Cổ Điển Hoàng Triều (Vintage)", "vintage")
         self.cb_theme.addItem("📋 Bảng Trắng Nghệ Thuật (Whiteboard)", "whiteboard")
         self.cb_theme.addItem("🎓 Bảng Đen Phấn (Blackboard)", "blackboard")
         self.cb_theme.currentIndexChanged.connect(self.on_theme_changed)
         tr_row.addWidget(self.cb_theme)
 
-        tr_row.addWidget(QLabel("📐 Định dạng:"))
-        self.cb_ratio = QComboBox()
+        tr_row.addWidget(QLabel("📐 Định dạng:", settings_group))
+        self.cb_ratio = QComboBox(settings_group)
         self.cb_ratio.addItem("🖥️ 16:9 Ngang (YouTube 1080p)", (1920, 1080))
         self.cb_ratio.addItem("📱 9:16 Dọc (TikTok / Reels)", (1080, 1920))
         tr_row.addWidget(self.cb_ratio)
         st_layout.addLayout(tr_row)
 
         chk_row = QHBoxLayout()
-        self.chk_hand = QCheckBox("Bàn tay vẽ nét chì & quét màu nước")
+        self.chk_hand = QCheckBox("Bàn tay vẽ nét chì & quét màu nước", settings_group)
         self.chk_hand.setChecked(True)
         self.chk_hand.toggled.connect(self.on_hand_toggled)
         chk_row.addWidget(self.chk_hand)
 
-        self.chk_camera = QCheckBox("Camera Pan & Zoom điện ảnh (Ken Burns)")
+        self.chk_camera = QCheckBox("Camera Pan & Zoom điện ảnh (Ken Burns)", settings_group)
         self.chk_camera.setChecked(True)
         chk_row.addWidget(self.chk_camera)
         st_layout.addLayout(chk_row)
 
-        self.progress_bar = QProgressBar()
+        self.progress_bar = QProgressBar(settings_group)
         self.progress_bar.setValue(0)
         self.progress_bar.setFixedHeight(22)
         st_layout.addWidget(self.progress_bar)
 
-        self.lbl_status = QLabel("Sẵn sàng xuất video...")
+        self.lbl_status = QLabel("Sẵn sàng xuất video...", settings_group)
         self.lbl_status.setStyleSheet("font-size: 11px; color: #38bdf8;")
         st_layout.addWidget(self.lbl_status)
 
-        self.btn_export = QPushButton("🚀 Xuất Toàn Bộ Video MP4 Lịch Sử Hoàn Chỉnh (Full HD)")
+        self.btn_export = QPushButton("🚀 Xuất Toàn Bộ Video MP4 Lịch Sử Hoàn Chỉnh (Full HD)", settings_group)
         self.btn_export.setObjectName("accentBtn")
         self.btn_export.clicked.connect(self.on_start_export)
         st_layout.addWidget(self.btn_export)
 
         right_layout.addWidget(settings_group)
-        splitter.addWidget(right_panel)
+        self.splitter.addWidget(right_panel)
 
-        splitter.setSizes([450, 850])
+        self.splitter.setSizes([450, 850])
+        self.main_layout.addWidget(self.splitter)
 
     def populate_artworks(self):
         self.cb_artwork.blockSignals(True)
@@ -597,7 +597,9 @@ class MainWindow(QMainWindow):
         self.scene_list.clear()
 
         for s in self.current_scenes:
-            item = QListWidgetItem(f"🎬 {s.title}\n   "{s.text[:55]}..."")
+            short_txt = s.text[:45].replace('\n', ' ')
+            item_text = f"🎬 {s.title}\n   '{short_txt}...'"
+            item = QListWidgetItem(item_text)
             self.scene_list.addItem(item)
 
         if self.current_scenes:
@@ -613,7 +615,6 @@ class MainWindow(QMainWindow):
         self.scene_text_edit.setText(scene.text)
         self.scene_text_edit.blockSignals(False)
 
-        # Select corresponding artwork in combo
         art_id = getattr(scene, "artwork_id", "art_vn_quang_trung")
         found = False
         for i in range(self.cb_artwork.count()):
@@ -643,7 +644,7 @@ class MainWindow(QMainWindow):
         if self.is_playing_all:
             self.is_playing_all = False
             self.canvas_widget.pause_preview()
-            self.btn_play_all.setText("🎬 Phát Toàn Bộ Video")
+            self.btn_play_all.setText("🎬 Phát Toàn Bộ Video (Tất Cả Cảnh)")
             self.lbl_status.setText("Đã tạm dừng phát toàn bộ.")
             return
 
@@ -657,7 +658,7 @@ class MainWindow(QMainWindow):
 
     def on_play_preview(self):
         self.is_playing_all = False
-        self.btn_play_all.setText("🎬 Phát Toàn Bộ Video")
+        self.btn_play_all.setText("🎬 Phát Toàn Bộ Video (Tất Cả Cảnh)")
         row = self.scene_list.currentRow()
         if 0 <= row < len(self.current_scenes):
             self.play_scene_at(row, continue_all=False)
@@ -698,7 +699,7 @@ class MainWindow(QMainWindow):
                 self.play_scene_at(next_idx, continue_all=True)
             else:
                 self.is_playing_all = False
-                self.btn_play_all.setText("🎬 Phát Toàn Bộ Video")
+                self.btn_play_all.setText("🎬 Phát Toàn Bộ Video (Tất Cả Cảnh)")
                 self.lbl_status.setText("Đã xem xong toàn bộ video! 🎉")
 
     def _on_canvas_progress_updated(self, progress: float):
@@ -729,7 +730,7 @@ class MainWindow(QMainWindow):
 
     def on_pause_clicked(self):
         self.is_playing_all = False
-        self.btn_play_all.setText("🎬 Phát Toàn Bộ Video")
+        self.btn_play_all.setText("🎬 Phát Toàn Bộ Video (Tất Cả Cảnh)")
         self.canvas_widget.pause_preview()
         self.lbl_status.setText("Đã tạm dừng xem trước.")
 
