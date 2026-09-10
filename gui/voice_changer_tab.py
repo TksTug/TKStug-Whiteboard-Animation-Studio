@@ -4,7 +4,7 @@ import threading
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QFileDialog, QComboBox, QSlider, QProgressBar, QMessageBox,
-    QGroupBox, QFrame, QScrollArea, QSplitter
+    QGroupBox, QFrame, QSplitter, QTextEdit, QRadioButton, QButtonGroup
 )
 from PyQt6.QtCore import Qt, QUrl, pyqtSignal, QObject
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
@@ -21,7 +21,6 @@ class CelebrityVoiceChangerTab(QWidget):
         self.input_file_path = None
         self.output_file_path = None
 
-        # Media player for preview
         self.player = QMediaPlayer()
         self.audio_output = QAudioOutput()
         self.player.setAudioOutput(self.audio_output)
@@ -46,51 +45,92 @@ class CelebrityVoiceChangerTab(QWidget):
         
         lbl_title = QLabel("🎵 AI ĐỔI GIỌNG BÀI HÁT & NGƯỜI NỔI TIẾNG (CELEBRITY AI COVER STUDIO)")
         lbl_title.setStyleSheet("font-size: 16px; font-weight: bold; color: #38bdf8;")
-        lbl_sub = QLabel("Chuyển đổi bất kỳ bài hát hoặc file âm thanh sang chất giọng của các ca sĩ, nghệ sĩ, nhân vật huyền thoại.")
+        lbl_sub = QLabel("Chuyển đổi bài hát hoặc tạo giọng nói trực tiếp sang chất giọng của các ca sĩ, nghệ sĩ, nhân vật huyền thoại.")
         lbl_sub.setStyleSheet("font-size: 12px; color: #94a3b8;")
         h_layout.addWidget(lbl_title)
         h_layout.addWidget(lbl_sub)
         main_layout.addWidget(header_box)
 
-        # Splitter Layout (Left: Controls, Right: Celebrity Selector & Output)
+        # Mode Selection Bar (Audio File vs Direct Text)
+        mode_box = QFrame()
+        mode_box.setStyleSheet("background: #1e293b; border-radius: 6px; padding: 6px;")
+        m_layout = QHBoxLayout(mode_box)
+        m_layout.setContentsMargins(8, 4, 8, 4)
+
+        lbl_mode = QLabel("Chọn Chế Độ:")
+        lbl_mode.setStyleSheet("font-weight: bold; color: #f8fafc;")
+        m_layout.addWidget(lbl_mode)
+
+        self.rb_mode_file = QRadioButton("📁 Đổi Giọng Từ File Bài Hát / Âm Thanh (.mp3, .wav)")
+        self.rb_mode_file.setChecked(True)
+        self.rb_mode_file.setStyleSheet("color: #38bdf8; font-weight: bold;")
+        self.rb_mode_file.toggled.connect(self.on_mode_toggled)
+        m_layout.addWidget(self.rb_mode_file)
+
+        self.rb_mode_text = QRadioButton("✍️ Tạo Giọng Đọc & Hát AI Trực Tiếp Từ Lời Bài Hát / Văn Bản")
+        self.rb_mode_text.setStyleSheet("color: #a78bfa; font-weight: bold;")
+        self.rb_mode_text.toggled.connect(self.on_mode_toggled)
+        m_layout.addWidget(self.rb_mode_text)
+
+        m_layout.addStretch()
+        main_layout.addWidget(mode_box)
+
+        # Splitter Layout (Left: Input & Settings, Right: Celebrity & Action)
         splitter = QSplitter(Qt.Orientation.Horizontal)
 
         # --- LEFT PANEL ---
         left_widget = QWidget()
         left_layout = QVBoxLayout(left_widget)
         left_layout.setContentsMargins(0, 0, 5, 0)
-        left_layout.setSpacing(12)
+        left_layout.setSpacing(10)
 
-        # 1. File Input Group
-        input_grp = QGroupBox("1. File Bài Hát / Âm Thanh Gốc")
-        input_grp.setStyleSheet("QGroupBox { font-weight: bold; color: #f8fafc; border: 1px solid #334155; border-radius: 8px; margin-top: 10px; padding-top: 15px; }")
-        ig_layout = QVBoxLayout(input_grp)
+        # 1. Input Group
+        self.input_grp = QGroupBox("1. Nguồn Âm Thanh Đầu Vào")
+        self.input_grp.setStyleSheet("QGroupBox { font-weight: bold; color: #f8fafc; border: 1px solid #334155; border-radius: 8px; margin-top: 10px; padding-top: 15px; }")
+        self.ig_layout = QVBoxLayout(self.input_grp)
 
+        # File Mode widgets
+        self.file_widget = QWidget()
+        fw_layout = QVBoxLayout(self.file_widget)
+        fw_layout.setContentsMargins(0, 0, 0, 0)
+        
         self.btn_select_file = QPushButton("📂 Chọn File Bài Hát (.mp3, .wav, .m4a)")
         self.btn_select_file.setStyleSheet("background: #2563eb; color: white; font-weight: bold; padding: 8px 12px; border-radius: 6px;")
         self.btn_select_file.clicked.connect(self.on_select_file)
-        ig_layout.addWidget(self.btn_select_file)
+        fw_layout.addWidget(self.btn_select_file)
 
         self.lbl_file_info = QLabel("Chưa chọn file nào...")
         self.lbl_file_info.setStyleSheet("color: #cbd5e1; font-size: 11px;")
         self.lbl_file_info.setWordWrap(True)
-        ig_layout.addWidget(self.lbl_file_info)
+        fw_layout.addWidget(self.lbl_file_info)
 
-        # Play Original Button
         self.btn_play_orig = QPushButton("▶ Nghe Thử File Gốc")
         self.btn_play_orig.setStyleSheet("background: #334155; color: #e2e8f0; padding: 6px; border-radius: 5px;")
         self.btn_play_orig.setEnabled(False)
         self.btn_play_orig.clicked.connect(self.on_play_original)
-        ig_layout.addWidget(self.btn_play_orig)
+        fw_layout.addWidget(self.btn_play_orig)
+        self.ig_layout.addWidget(self.file_widget)
 
-        left_layout.addWidget(input_grp)
+        # Text Mode widgets
+        self.text_widget = QWidget()
+        tw_layout = QVBoxLayout(self.text_widget)
+        tw_layout.setContentsMargins(0, 0, 0, 0)
+        
+        self.txt_lyrics = QTextEdit()
+        self.txt_lyrics.setPlaceholderText("Nhập lời bài hát hoặc văn bản bạn muốn người nổi tiếng đọc/hát tại đây...\nVí dụ: 'Ta thà phụ người trong thiên hạ, chứ không để người trong thiên hạ phụ ta!'")
+        self.txt_lyrics.setStyleSheet("background: #0f172a; color: white; border: 1px solid #334155; border-radius: 6px; padding: 8px;")
+        self.txt_lyrics.setFixedHeight(120)
+        tw_layout.addWidget(self.txt_lyrics)
+        self.text_widget.setVisible(False)
+        self.ig_layout.addWidget(self.text_widget)
+
+        left_layout.addWidget(self.input_grp)
 
         # 2. Tuning Controls Group
-        tune_grp = QGroupBox("2. Tinh Chỉnh Tông Giọng & Âm Sắc")
-        tune_grp.setStyleSheet("QGroupBox { font-weight: bold; color: #f8fafc; border: 1px solid #334155; border-radius: 8px; margin-top: 10px; padding-top: 15px; }")
-        tg_layout = QVBoxLayout(tune_grp)
+        self.tune_grp = QGroupBox("2. Tinh Chỉnh Tông Giọng & Độ Ngân")
+        self.tune_grp.setStyleSheet("QGroupBox { font-weight: bold; color: #f8fafc; border: 1px solid #334155; border-radius: 8px; margin-top: 10px; padding-top: 15px; }")
+        tg_layout = QVBoxLayout(self.tune_grp)
 
-        # Pitch Shift Slider
         lbl_pitch_title = QLabel("Tông Giọng (Pitch Shift / Bán âm):")
         lbl_pitch_title.setStyleSheet("color: #cbd5e1; font-size: 12px;")
         tg_layout.addWidget(lbl_pitch_title)
@@ -101,18 +141,17 @@ class CelebrityVoiceChangerTab(QWidget):
         self.slider_pitch.setValue(0)
         self.slider_pitch.valueChanged.connect(self.on_pitch_changed)
         
-        self.lbl_pitch_val = QLabel("0 (Giữ nguyên)")
-        self.lbl_pitch_val.setStyleSheet("color: #38bdf8; font-weight: bold; min-width: 90px;")
+        self.lbl_pitch_val = QLabel("0 (Chuẩn theo nhân vật)")
+        self.lbl_pitch_val.setStyleSheet("color: #38bdf8; font-weight: bold; min-width: 140px;")
         pitch_row.addWidget(self.slider_pitch)
         pitch_row.addWidget(self.lbl_pitch_val)
         tg_layout.addLayout(pitch_row)
 
-        lbl_pitch_hint = QLabel("💡 Gợi ý: Chuyển Nam -> Nữ (+12), Nữ -> Nam (-12), Cùng giới tính (0).")
+        lbl_pitch_hint = QLabel("💡 Gợi ý: Chuyển Nam -> Nữ (+12), Nữ -> Nam (-12), Tự động tối ưu (0).")
         lbl_pitch_hint.setStyleSheet("color: #64748b; font-size: 10px; font-style: italic;")
         tg_layout.addWidget(lbl_pitch_hint)
 
-        # Vocal Volume Slider
-        lbl_vol_title = QLabel("Âm Lượng Giọng Hát AI:")
+        lbl_vol_title = QLabel("Âm Lượng Giọng Ca AI:")
         lbl_vol_title.setStyleSheet("color: #cbd5e1; font-size: 12px; margin-top: 8px;")
         tg_layout.addWidget(lbl_vol_title)
 
@@ -128,7 +167,7 @@ class CelebrityVoiceChangerTab(QWidget):
         vol_row.addWidget(self.lbl_vol_val)
         tg_layout.addLayout(vol_row)
 
-        left_layout.addWidget(tune_grp)
+        left_layout.addWidget(self.tune_grp)
         left_layout.addStretch()
         splitter.addWidget(left_widget)
 
@@ -136,7 +175,7 @@ class CelebrityVoiceChangerTab(QWidget):
         right_widget = QWidget()
         right_layout = QVBoxLayout(right_widget)
         right_layout.setContentsMargins(5, 0, 0, 0)
-        right_layout.setSpacing(12)
+        right_layout.setSpacing(10)
 
         # 3. Celebrity Voice Preset Selector Group
         voice_grp = QGroupBox("3. Chọn Giọng Người Nổi Tiếng Mục Tiêu")
@@ -167,7 +206,7 @@ class CelebrityVoiceChangerTab(QWidget):
         action_grp.setStyleSheet("QGroupBox { font-weight: bold; color: #f8fafc; border: 1px solid #334155; border-radius: 8px; margin-top: 10px; padding-top: 15px; }")
         ag_layout = QVBoxLayout(action_grp)
 
-        self.btn_convert = QPushButton("⚡ BẮT ĐẦU ĐỔI GIỌNG AI BÀI HÁT")
+        self.btn_convert = QPushButton("⚡ BẮT ĐẦU ĐỔI GIỌNG AI")
         self.btn_convert.setStyleSheet("background: #f59e0b; color: #000; font-weight: bold; font-size: 14px; padding: 12px; border-radius: 8px;")
         self.btn_convert.clicked.connect(self.on_start_conversion)
         ag_layout.addWidget(self.btn_convert)
@@ -182,7 +221,6 @@ class CelebrityVoiceChangerTab(QWidget):
         self.lbl_status.setStyleSheet("color: #94a3b8; font-size: 11px;")
         ag_layout.addWidget(self.lbl_status)
 
-        # Output Audio Player Controls
         out_player_row = QHBoxLayout()
         self.btn_play_out = QPushButton("▶ Nghe Thử Kết Quả AI")
         self.btn_play_out.setStyleSheet("background: #10b981; color: white; font-weight: bold; padding: 8px; border-radius: 6px;")
@@ -203,6 +241,16 @@ class CelebrityVoiceChangerTab(QWidget):
         splitter.addWidget(right_widget)
 
         main_layout.addWidget(splitter)
+
+    def on_mode_toggled(self):
+        is_file_mode = self.rb_mode_file.isChecked()
+        self.file_widget.setVisible(is_file_mode)
+        self.text_widget.setVisible(not is_file_mode)
+        self.tune_grp.setVisible(is_file_mode)
+        if is_file_mode:
+            self.btn_convert.setText("⚡ BẮT ĐẦU ĐỔI GIỌNG TỪ FILE BÀI HÁT")
+        else:
+            self.btn_convert.setText("🎙️ TẠO GIỌNG ĐỌC & HÁT AI NGƯỜI NỔI TIẾNG")
 
     def on_select_file(self):
         fpath, _ = QFileDialog.getOpenFileName(
@@ -236,7 +284,7 @@ class CelebrityVoiceChangerTab(QWidget):
         elif val < 0:
             self.lbl_pitch_val.setText(f"{val} (Trầm sâu)")
         else:
-            self.lbl_pitch_val.setText("0 (Giữ nguyên)")
+            self.lbl_pitch_val.setText("0 (Chuẩn theo nhân vật)")
 
     def on_celebrity_changed(self, idx: int):
         if 0 <= idx < len(self.engine.celebrity_presets):
@@ -258,7 +306,8 @@ class CelebrityVoiceChangerTab(QWidget):
                 "category": "Mẫu Giọng Đã Thêm",
                 "gender": "male",
                 "pitch_default": 0,
-                "eq_profile": "vocal_warm",
+                "eq_filter": "equalizer=f=2500:width_type=h:width=1000:g=4",
+                "tts_voice": "tao-thao",
                 "desc": f"Mô hình giọng tùy chỉnh được nạp từ: {os.path.basename(fpath)}"
             }
             self.engine.celebrity_presets.append(new_preset)
@@ -267,20 +316,22 @@ class CelebrityVoiceChangerTab(QWidget):
             QMessageBox.information(self, "Thêm Giọng Mới", f"Đã nạp thành công mô hình giọng: {name}!")
 
     def on_start_conversion(self):
-        if not self.input_file_path or not os.path.exists(self.input_file_path):
-            QMessageBox.warning(self, "Chưa Chọn File", "Vui lòng chọn file bài hát hoặc âm thanh gốc trước!")
-            return
-
         celebrity_id = self.cb_celebrity.currentData()
-        pitch_val = self.slider_pitch.value()
-        vocal_vol = self.slider_vol.value() / 100.0
+        is_file_mode = self.rb_mode_file.isChecked()
 
-        temp_out = os.path.join(self.engine.temp_dir, f"ai_cover_result_{os.path.basename(self.input_file_path)}")
-        if not temp_out.endswith(".mp3"):
-            temp_out += ".mp3"
+        if is_file_mode:
+            if not self.input_file_path or not os.path.exists(self.input_file_path):
+                QMessageBox.warning(self, "Chưa Chọn File", "Vui lòng chọn file bài hát hoặc âm thanh gốc trước!")
+                return
+        else:
+            lyrics_text = self.txt_lyrics.toPlainText().strip()
+            if not lyrics_text:
+                QMessageBox.warning(self, "Chưa Nhập Văn Bản", "Vui lòng nhập lời bài hát hoặc văn bản cần đọc!")
+                return
+
+        temp_out = os.path.join(self.engine.temp_dir, f"ai_voice_result_{uuid.uuid4().hex[:6]}.mp3")
 
         self.btn_convert.setEnabled(False)
-        self.btn_select_file.setEnabled(False)
         self.progress_bar.setValue(0)
 
         def run():
@@ -288,14 +339,26 @@ class CelebrityVoiceChangerTab(QWidget):
                 def p_cb(pct, text):
                     self.signals.progress.emit(pct, text)
 
-                ok = self.engine.convert_celebrity_voice(
-                    input_audio_path=self.input_file_path,
-                    celebrity_id=celebrity_id,
-                    output_path=temp_out,
-                    pitch_semitones=pitch_val,
-                    vocal_volume=vocal_vol,
-                    progress_callback=p_cb
-                )
+                if is_file_mode:
+                    pitch_val = self.slider_pitch.value()
+                    vocal_vol = self.slider_vol.value() / 100.0
+                    ok = self.engine.convert_audio_file(
+                        input_audio_path=self.input_file_path,
+                        celebrity_id=celebrity_id,
+                        output_path=temp_out,
+                        pitch_semitones=pitch_val,
+                        vocal_volume=vocal_vol,
+                        progress_callback=p_cb
+                    )
+                else:
+                    lyrics_text = self.txt_lyrics.toPlainText().strip()
+                    ok = self.engine.synthesize_celebrity_speech(
+                        text=lyrics_text,
+                        celebrity_id=celebrity_id,
+                        output_path=temp_out,
+                        progress_callback=p_cb
+                    )
+
                 self.signals.finished.emit(ok, temp_out)
             except Exception as e:
                 self.signals.finished.emit(False, str(e))
@@ -309,18 +372,17 @@ class CelebrityVoiceChangerTab(QWidget):
 
     def on_finished(self, success: bool, msg: str):
         self.btn_convert.setEnabled(True)
-        self.btn_select_file.setEnabled(True)
 
         if success:
             self.output_file_path = msg
             self.btn_play_out.setEnabled(True)
             self.btn_save_mp3.setEnabled(True)
             self.progress_bar.setValue(100)
-            self.lbl_status.setText("🎉 Chuyển đổi giọng AI thành công 100%!")
-            QMessageBox.information(self, "Thành Công!", f"Đã đổi giọng bài hát thành công!\nBạn có thể bấm 'Nghe Thử Kết Quả AI' hoặc 'Lưu File MP3'.")
+            self.lbl_status.setText("🎉 Xử lý giọng AI thành công 100%!")
+            QMessageBox.information(self, "Thành Công!", f"Đã xử lý giọng AI thành công!\nBạn có thể bấm 'Nghe Thử Kết Quả AI' hoặc 'Lưu File MP3'.")
         else:
             self.lbl_status.setText("Có lỗi xảy ra.")
-            QMessageBox.critical(self, "Lỗi Đổi Giọng", f"Không thể đổi giọng:\n{msg}")
+            QMessageBox.critical(self, "Lỗi Đổi Giọng", f"Không thể xử lý:\n{msg}")
 
     def on_play_output(self):
         if self.output_file_path and os.path.exists(self.output_file_path):
