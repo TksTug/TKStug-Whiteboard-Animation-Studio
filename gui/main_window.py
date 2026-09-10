@@ -592,32 +592,33 @@ class MainWindow(QMainWindow):
 
     def load_sample_story(self):
         sample = (
-            "Hơn bốn ngàn năm lịch sử dựng nước và giữ nước, mảnh đất hình chữ S đã tôi luyện nên ý chí quật cường và tinh thần bất khuất của dân tộc Việt Nam.
-
-Từ thuở sơ khai của các vua Hùng dựng nước Văn Lang, tiếng Trống Đồng Đông Sơn trầm hùng vang vọng khắp núi sông, hun đúc nên nguồn cội thiêng liêng của dòng giống Tiên Rồng.
-
-Mùa xuân năm bốn mươi, nợ nước thù nhà sục sôi, Hai Bà Trưng cưỡi voi phất cờ khởi nghĩa tại Mê Linh, tiếng hô xung trận chấn động bờ cõi, mở ra trang sử vẻ vang của người phụ nữ Việt Nam.
-
-Đến năm chín trăm ba mươi tám, trên dòng sông Bạch Đằng cuộn sóng gầm vang, trận địa cọc gỗ ngầm của Ngô Quyền đã nhấn chìm chiến thuyền quân thù, chấm dứt hơn một ngàn năm Bắc thuộc.
-
-Mùa thu năm một ngàn không trăm mười, vua Lý Thái Tổ nhìn thấy rồng vàng bay lên, quyết định ban Chiếu dời đô về Thăng Long, đặt nền móng ngàn năm văn hiến cho kinh đô nước Việt.
-
-Vào thế kỷ thứ mười ba, trước vó ngựa hung tàn của đế chế Mông Nguyên, quân dân nhà Trần với hào khí Đông A rực lửa và lời thề Sát Thát đã ba lần quét sạch giặc ngoại xâm.
-
-Nơi núi rừng Lam Sơn hiểm trở, Lê Lợi cùng Nguyễn Trãi nếm mật nằm gai mười năm trường kỳ, dùng thanh gươm Thuận Thiên dẹp tan quân Minh, lập lại nền thái bình muôn thuở.
-
-Mùa xuân Kỷ Dậu năm một ngàn bảy trăm tám mươi chín, Hoàng đế Quang Trung mặc áo vải cờ đào thần tốc hành quân, đại phá hai mươi chín vạn quân Thanh tại Ngọc Hồi Đống Đa vang dội.
-
-Bên dòng sông Hương thơ mộng, Cố Đô Huế sừng sững uy nghiêm với Ngọ Môn và cung điện cổ kính, lưu giữ tinh hoa kiến trúc cùng bản sắc văn hóa hoàng triều ngàn đời.
-
-Tháng năm năm một ngàn chín trăm năm mươi tư, chiến dịch Điện Biên Phủ toàn thắng lừng lẫy năm châu chấn động địa cầu, khẳng định sức mạnh đại đoàn kết toàn dân.
-
-Từ đỉnh đầu Lũng Cú Móng Cái đến mũi Cà Mau, cùng hai quần đảo Hoàng Sa và Trường Sa thiêng liêng, non sông Việt Nam liền một dải, chủ quyền lãnh thổ đời đời bất khả xâm phạm.
-
-Kế thừa truyền thống kiên cường của cha ông, thế hệ hôm nay vững vàng bước vào kỷ nguyên mới, viết tiếp những trang sử vẻ vang đưa non sông Việt Nam vươn tầm thế giới."
+            "Hơn bốn ngàn năm lịch sử dựng nước và giữ nước, mảnh đất hình chữ S đã tôi luyện nên ý chí quật cường và tinh thần bất khuất của dân tộc Việt Nam.\n\n"
+            "Từ thuở sơ khai của các vua Hùng dựng nước Văn Lang, tiếng Trống Đồng Đông Sơn trầm hùng vang vọng khắp núi sông, hun đúc nên nguồn cội thiêng liêng của dòng giống Tiên Rồng.\n\n"
+            "Mùa xuân năm bốn mươi, nợ nước thù nhà sục sôi, Hai Bà Trưng cưỡi voi phất cờ khởi nghĩa tại Mê Linh, tiếng hô xung trận chấn động bờ cõi, mở ra trang sử vẻ vang của người phụ nữ Việt Nam.\n\n"
+            "Đến năm chín trăm ba mươi tám, trên dòng sông Bạch Đằng cuộn sóng gầm vang, trận địa cọc gỗ ngầm của Ngô Quyền đã nhấn chìm chiến thuyền quân thù, chấm dứt hơn một ngàn năm Bắc thuộc.\n\n"
+            "Mùa thu năm một ngàn không trăm mười, vua Lý Thái Tổ nhìn thấy rồng vàng bay lên, quyết định ban Chiếu dời đô về Thăng Long, đặt nền móng ngàn năm văn hiến cho kinh đô nước Việt.\n\n"
+            "Vào thế kỷ thứ mười ba, trước vó ngựa hung tàn của đế chế Mông Nguyên, quân dân nhà Trần với hào khí Đông A rực lửa và lời thề Sát Thát đã ba lần quét sạch giặc ngoại xâm.\n\n"
+            "Nơi núi rừng Lam Sơn hiểm trở, Lê Lợi cùng Nguyễn Trãi nếm mật nằm gai mười năm trường kỳ, dùng thanh gươm Thuận Thiên dẹp tan quân Minh, lập lại nền thái bình muôn thuở.\n\n"
+            "Mùa xuân Kỷ Dậu năm một ngàn bảy trăm tám mươi chín, Hoàng đế Quang Trung mặc áo vải cờ đào thần tốc hành quân, đại phá hai mươi chín vạn quân Thanh tại Ngọc Hồi Đống Đa vang dội.\n\n"
+            "Bên dòng sông Hương thơ mộng, Cố Đô Huế sừng sững uy nghiêm với Ngọ Môn và cung điện cổ kính, lưu giữ tinh hoa kiến trúc cùng bản sắc văn hóa hoàng triều ngàn đời.\n\n"
+            "Tháng năm năm một ngàn chín trăm năm mươi tư, chiến dịch Điện Biên Phủ toàn thắng lừng lẫy năm châu chấn động địa cầu, khẳng định sức mạnh đại đoàn kết toàn dân.\n\n"
+            "Từ đỉnh đầu Lũng Cú Móng Cái đến mũi Cà Mau, cùng hai quần đảo Hoàng Sa và Trường Sa thiêng liêng, non sông Việt Nam liền một dải, chủ quyền lãnh thổ đời đời bất khả xâm phạm.\n\n"
+            "Kế thừa truyền thống kiên cường của cha ông, thế hệ hôm nay vững vàng bước vào kỷ nguyên mới, viết tiếp những trang sử vẻ vang đưa non sông Việt Nam vươn tầm thế giới."
         )
         self.script_input.setPlainText(sample)
         self.on_auto_segment()
+    def _precache_all_scenes_audio(self):
+        """Pre-synthesizes audio in background so frame switching is instantaneous (0 delay)"""
+        voice_id = self.cb_voice.currentData()
+        scenes_copy = list(self.current_scenes)
+        for idx, sc in enumerate(scenes_copy):
+            if not sc.audio_path or not os.path.exists(sc.audio_path):
+                try:
+                    audio_p, dur = self.tts_engine.synthesize(sc.text, voice_id=voice_id)
+                    sc.audio_path = audio_p
+                    sc.duration = max(dur, 2.5)
+                except Exception as e:
+                    print(f"Precache error on scene {idx}: {e}")
 
     def on_auto_segment(self):
         text = self.script_input.toPlainText().strip()
@@ -638,6 +639,7 @@ Kế thừa truyền thống kiên cường của cha ông, thế hệ hôm nay 
             self.scene_list.setCurrentRow(0)
             self.lbl_status.setText(f"Đã phân chia thành {len(self.current_scenes)} phân cảnh lịch sử hoàn chỉnh!")
             self.canvas_widget.set_scene(self.current_scenes[0], self.cb_theme.currentData())
+            threading.Thread(target=self._precache_all_scenes_audio, daemon=True).start()
 
     def on_scene_selected(self, row: int):
         if row < 0 or row >= len(self.current_scenes):
@@ -749,19 +751,46 @@ Kế thừa truyền thống kiên cường của cha ông, thế hệ hôm nay 
             return
         scene = self.current_scenes[row]
         voice_id = self.cb_voice.currentData()
+        
+        # If already cached, play immediately without waiting
+        if scene.audio_path and os.path.exists(scene.audio_path):
+            self._handle_preview_ready(row, scene.audio_path, scene.duration)
+            # Precache subsequent scenes in background
+            self._precache_following_scenes(row + 1)
+            return
+
         self.lbl_status.setText(f"Đang chuẩn bị giọng đọc Cảnh {row+1}/{len(self.current_scenes)}...")
 
         def synth_and_play():
-            if not scene.audio_path or not os.path.exists(scene.audio_path):
-                audio_p, dur = self.tts_engine.synthesize(scene.text, voice_id=voice_id)
-                scene.audio_path = audio_p
-                scene.duration = max(dur, 2.5)
-            else:
-                dur = scene.duration
-                audio_p = scene.audio_path
-            self.signals.preview_ready.emit(row, audio_p, dur)
+            try:
+                if not scene.audio_path or not os.path.exists(scene.audio_path):
+                    audio_p, dur = self.tts_engine.synthesize(scene.text, voice_id=voice_id)
+                    scene.audio_path = audio_p
+                    scene.duration = max(dur, 2.5)
+                else:
+                    dur = scene.duration
+                    audio_p = scene.audio_path
+                self.signals.preview_ready.emit(row, audio_p, dur)
+                # Precache subsequent scenes in background
+                self._precache_following_scenes(row + 1)
+            except Exception as e:
+                print(f"Error synthesizing audio for scene {row}: {e}")
 
         threading.Thread(target=synth_and_play, daemon=True).start()
+
+    def _precache_following_scenes(self, start_idx: int):
+        def _bg_precache():
+            voice_id = self.cb_voice.currentData()
+            for idx in range(start_idx, min(start_idx + 3, len(self.current_scenes))):
+                sc = self.current_scenes[idx]
+                if not sc.audio_path or not os.path.exists(sc.audio_path):
+                    try:
+                        audio_p, dur = self.tts_engine.synthesize(sc.text, voice_id=voice_id)
+                        sc.audio_path = audio_p
+                        sc.duration = max(dur, 2.5)
+                    except Exception as e:
+                        print(f"Precache error on scene {idx}: {e}")
+        threading.Thread(target=_bg_precache, daemon=True).start()
 
     def _handle_preview_ready(self, row: int, audio_p: str, dur: float):
         if 0 <= row < len(self.current_scenes):
