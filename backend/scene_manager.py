@@ -87,7 +87,7 @@ class SceneManager:
                 if not s:
                     continue
                 words = s.split()
-                if current_word_count + len(words) > 35 and current_chunk:
+                if current_word_count + len(words) > 55 and current_chunk:
                     chunks.append(" ".join(current_chunk))
                     current_chunk = [s]
                     current_word_count = len(words)

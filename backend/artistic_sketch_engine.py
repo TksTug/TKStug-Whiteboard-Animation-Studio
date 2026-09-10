@@ -2,7 +2,7 @@ import os
 import cv2
 import math
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from PIL import Image, ImageDraw, ImageFont
 from backend.utils import get_asset_path
 
 class ArtisticSketchEngine:
@@ -61,11 +61,11 @@ class ArtisticSketchEngine:
         is_static: bool = False
     ) -> Image.Image:
         """
-        Ultra-Fast Synchronized Pacing (Drawing completes early in first ~35% of narration):
-        - Phase 1 (0.00 -> 0.18): Fast energetic line-art pencil sketching
-        - Phase 2 (0.18 -> 0.35): Vibrant anime color wash
-        - Phase 3 (0.35 -> 0.44): Smooth hand retreat offscreen
-        - Phase 4 (0.44 -> 1.00): Full artwork showcase with cinematic Ken Burns camera zoom and real-time highlighted karaoke subtitles
+        Smooth, Non-Shaking Synchronized Drawing & Inking:
+        - Phase 1 (0.00 -> 0.40): Elegant energetic line-art pencil sketching
+        - Phase 2 (0.40 -> 0.75): Rich vibrant color watercolor wash
+        - Phase 3 (0.75 -> 0.85): Smooth hand retreat offscreen
+        - Phase 4 (0.85 -> 1.00): 100% steady, crystal-clear, rock-solid completed artwork (NO JITTER / NO CAMERA SHAKE)
         """
         color_p, sketch_p = self.get_artwork_paths(art_id)
         
@@ -95,10 +95,10 @@ class ArtisticSketchEngine:
                 self._render_dynamic_subtitles(frame_pil, sub_text, 1.0, width, height, font, theme)
             return frame_pil
 
-        # Fast Pacing Thresholds
-        p1_end = 0.18
-        p2_end = 0.35
-        p3_end = 0.44
+        # Balanced Pacing Thresholds
+        p1_end = 0.40
+        p2_end = 0.75
+        p3_end = 0.85
 
         active_hand_pos = None
         y_indices, x_indices = np.indices((height, width))
@@ -113,8 +113,8 @@ class ArtisticSketchEngine:
             
             sweep_x = int(p1_ratio * width * 0.85 + 40)
             sweep_y = int(p1_ratio * height * 0.70 + 80)
-            wobble_x = int(math.sin(progress * 80) * 18)
-            wobble_y = int(math.cos(progress * 90) * 14)
+            wobble_x = int(math.sin(progress * 70) * 16)
+            wobble_y = int(math.cos(progress * 80) * 12)
             active_hand_pos = (min(max(sweep_x + wobble_x, 60), width - 60), min(max(sweep_y + wobble_y, 80), height - 80))
 
         elif p1_end <= progress < p2_end:
@@ -126,33 +126,24 @@ class ArtisticSketchEngine:
 
             sweep_x = int(p2_ratio * width * 0.88 + 30)
             sweep_y = int(p2_ratio * height * 0.78 + 60)
-            brush_wobble_x = int(math.sin(progress * 60) * 24)
-            brush_wobble_y = int(math.cos(progress * 70) * 18)
+            brush_wobble_x = int(math.sin(progress * 50) * 20)
+            brush_wobble_y = int(math.cos(progress * 60) * 15)
             active_hand_pos = (min(max(sweep_x + brush_wobble_x, 60), width - 60), min(max(sweep_y + brush_wobble_y, 80), height - 80))
 
         else:
-            # Full color completed (0.35 to 1.00)
+            # Full color completed (0.75 to 1.00) - Steady & Sharp, ZERO CAMERA SHAKE
             current_frame_np = color_img.copy()
 
         frame_pil = Image.fromarray(np.clip(current_frame_np, 0, 255).astype(np.uint8))
 
-        # Phase 4: Cinematic Ken Burns Parallax Zoom (0.44 to 1.00)
-        if progress >= p3_end:
-            zoom_factor = 1.0 + ((progress - p3_end) / (1.0 - p3_end)) * 0.06
-            crop_w = int(width / zoom_factor)
-            crop_h = int(height / zoom_factor)
-            cx, cy = width // 2, height // 2
-            crop_box = (cx - crop_w // 2, cy - crop_h // 2, cx + crop_w // 2, cy + crop_h // 2)
-            frame_pil = frame_pil.crop(crop_box).resize((width, height), Image.Resampling.LANCZOS)
-
-        # Draw Sleek Hand Overlay
+        # Draw Hand Overlay (only during drawing phases)
         if hand_img:
             hand_scale = (height / 1080.0) * 0.72
             hw = max(int(hand_img.width * hand_scale), 60)
             hh = max(int(hand_img.height * hand_scale), 60)
             hand_resized = hand_img.resize((hw, hh), Image.Resampling.LANCZOS)
             
-            # Precise nib offset: 17.7% of width and height
+            # Precise tip offset: 17.7% of width and height
             tip_offset_x = int(hw * 0.177)
             tip_offset_y = int(hh * 0.177)
 

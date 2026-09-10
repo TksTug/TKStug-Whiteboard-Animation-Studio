@@ -585,10 +585,14 @@ class MainWindow(QMainWindow):
 
     def load_sample_story(self):
         sample = (
-            "Hơn hai ngàn năm dựng nước và giữ nước, non sông Việt Nam ngời sáng tinh thần bất khuất.\n\n"
-            "Từ tiếng Trống Đồng Đông Sơn thời các vua Hùng định đô, hun đúc nên nguồn cội dân tộc Việt Nam.\n\n"
-            "Đến ngọn sóng Bạch Đằng giang cuồn cuộn cọc gỗ nhọn, ngàn thu rửa sạch vết nhục xâm lăng.\n\n"
-            "Và mùa xuân Kỷ Dậu năm 1789, Hoàng đế Quang Trung áo vải cờ đào thần tốc hành quân, quét sạch hai mươi chín vạn quân Mãn Thanh."
+            "Hơn bốn ngàn năm lịch sử dựng nước và giữ nước, non sông gấm vóc Việt Nam ngời sáng tinh thần quật cường và ý chí độc lập ngàn đời.\n\n"
+            "Từ thuở sơ khai của các vua Hùng dựng nước Văn Lang, tiếng Trống Đồng Đông Sơn trầm hùng vang vọng khắp núi sông, hun đúc nên cội nguồn linh thiêng của con Rồng cháu Tiên.\n\n"
+            "Tiếp nối truyền thống kiên cường, mùa xuân năm bốn mươi, Hai Bà Trưng cưỡi voi phất cờ khởi nghĩa tại Mê Linh, mở ra trang sử oanh liệt của người phụ nữ Việt Nam.\n\n"
+            "Đến thế kỷ thứ mười, trên dòng sông Bạch Đằng cuồn cuộn sóng trào, trận địa cọc gỗ ngầm của Ngô Quyền đã chôn vùi quân thù, chấm dứt hơn một ngàn năm Bắc thuộc.\n\n"
+            "Mùa thu năm một ngàn không trăm mười, vua Lý Thái Tổ ban Chiếu dời đô về Thăng Long rồng bay, đặt nền móng ngàn năm văn hiến cho kinh đô rực rỡ.\n\n"
+            "Và mùa xuân Kỷ Dậu năm một ngàn bảy trăm tám mươi chín, Hoàng đế Quang Trung mặc áo vải cờ đào thần tốc hành quân, đại phá hai mươi chín vạn quân Thanh làm nên chiến thắng Đống Đa vang dội.\n\n"
+            "Trải qua những năm tháng kháng chiến trường kỳ, chiến thắng Điện Biên Phủ lừng lẫy năm châu chấn động địa cầu đã khẳng định bản lĩnh bất khuất của dân tộc Việt Nam.\n\n"
+            "Ngày nay, non sông Việt Nam liền một dải gấm vóc, từ địa đầu Móng Cái đến mũi Cà Mau, cùng triệu trái tim vững bước vươn mình vào kỷ nguyên thịnh vượng."
         )
         self.script_input.setPlainText(sample)
         self.on_auto_segment()
